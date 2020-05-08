@@ -3,7 +3,7 @@
 # YOUR CODE BELOW THIS LINE
 # ----------------------------------------------------------------------------
 
-EXPERIMENT="center" dt-launcher-rectification
+EXPERIMENT="right" dt-launcher-rectification
 
 # ----------------------------------------------------------------------------
 # YOUR CODE ABOVE THIS LINE
