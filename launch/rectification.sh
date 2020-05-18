@@ -44,6 +44,7 @@ for EXP in "${EXPERIMENTS[@]}"; do
       ${CATKIN_WS}/devel/bin/apriltag_demo \
           --debug \
           --decimate=1.0 \
+          --refine-edges=0 \
           ${IN_FILE};
       mogrify -format jpg ./*.pnm;
       rm -f ./*.pnm
