@@ -1,2 +1,4 @@
 docs/build
 *pyc
+dataset_generator/samples
+dataset_generator/datasheet.csv

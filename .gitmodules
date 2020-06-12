@@ -1,3 +1,6 @@
 [submodule "packages/apriltag3"]
 	path = packages/apriltag3
 	url = git@github.com:ripl-ttic/apriltag3
+[submodule "dataset_generator/apriltag-imgs"]
+	path = dataset_generator/apriltag-imgs
+	url = git@github.com:AprilRobotics/apriltag-imgs.git
