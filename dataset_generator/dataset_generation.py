@@ -5,6 +5,7 @@ import numpy as np
 import os
 import os.path
 import pandas as pd
+import numpy
 
 PATH_TO_TAG_IMAGES = os.path.join(os.path.abspath(__file__), '../apriltag-imgs/tag36h11')
 PATH_TO_BG_IMAGES = os.path.normpath(os.path.join(os.path.abspath(__file__), '../tag_bgs'))
@@ -73,8 +74,7 @@ def line_intersection(line1, line2):
     return np.array([x, y])
 
 
-for im_idx in range(1000):
-
+for im_idx in range(1):
     found_suitable_image = False
 
     while not found_suitable_image:
@@ -102,7 +102,6 @@ for im_idx in range(1000):
         cameraMatrix = calibration.get_K(height=IMAGE_RESOLUTION[0])
 
         projected, _ = cv2.projectPoints(points, rvec, tvec, cameraMatrix, distCoeffs)
-
         proj_pt = lambda pt: \
             cv2.projectPoints(np.array([[pt[0], pt[1], 0.0]]), rvec, tvec, cameraMatrix, distCoeffs)[0][0][
                 0]
@@ -164,11 +163,11 @@ for im_idx in range(1000):
             #     cv2.line(im, tuple(right_b.astype(int)), tuple(right_t.astype(int)), (0, 0, 255), thickness=2)
             #
             #     draw_quad(im, inner_cps, (255, 0, 0))
-
-    im_aug = seq(image=im)
-    if not os.path.exists('samples'):
-        os.makedirs('samples')
-    cv2.imwrite("samples/sample_%05d.png" % im_idx, im_aug)
+    #im_aug = seq(image=im)
+    im_aug = im
+    if not os.path.exists('raw'):
+        os.makedirs('raw')
+    cv2.imwrite("raw/%05d_raw.jpg" % im_idx, im_aug, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
     output_data['fx'].append(cameraMatrix[0][0])
     output_data['fy'].append(cameraMatrix[1][1])
@@ -183,6 +182,20 @@ for im_idx in range(1000):
     output_data['tag_id'].append(tag_id)
     output_data['tvec'].append(tvec)
     output_data['rvec'].append(rvec)
+
+    R = np.identity(3)
+    ds = np.identity(3)
+    mapx = numpy.ndarray(shape=(IMAGE_RESOLUTION[0], IMAGE_RESOLUTION[1], 1), dtype='float32')
+    mapy = numpy.ndarray(shape=(IMAGE_RESOLUTION[0], IMAGE_RESOLUTION[1], 1), dtype='float32')
+
+    mapx, mapy = cv2.initUndistortRectifyMap(cameraMatrix, distCoeffs, R , cameraMatrix , (IMAGE_RESOLUTION[1], IMAGE_RESOLUTION[0]), cv2.CV_32FC1, mapx, mapy)
+
+    res = cv2.remap(im_aug, mapx, mapy, cv2.INTER_NEAREST)
+
+    im_aug = res
+    if not os.path.exists('rect'):
+        os.makedirs('rect')
+    cv2.imwrite("rect/%05d_rect.jpg" % im_idx, im_aug, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
 
 df = pd.DataFrame(output_data)
 df.to_csv('datasheet.csv', index=False)
