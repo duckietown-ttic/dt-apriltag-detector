@@ -47,7 +47,16 @@ output_data = {
     'k2': list(),
     'p1': list(),
     'p2': list(),
-    'k3': list()}
+    'k3': list(),
+    'p11': list(),
+    'p12': list(),
+    'p13': list(),
+    'p21': list(),
+    'p22': list(),
+    'p23': list(),
+    'p31': list(),
+    'p32': list(),
+    'p33': list()}
 
 
 def draw_quad(image, cps, color=(0, 255, 0)):
@@ -105,7 +114,6 @@ for im_idx in range(1):
         proj_pt = lambda pt: \
             cv2.projectPoints(np.array([[pt[0], pt[1], 0.0]]), rvec, tvec, cameraMatrix, distCoeffs)[0][0][
                 0]
-
         # check that all corners are in the image bounds and that the image is not smaller than 5% of the dimensions
         x_min = np.min([projected[i][0][0] for i in range(4)])
         x_max = np.max([projected[i][0][0] for i in range(4)])
@@ -182,8 +190,22 @@ for im_idx in range(1):
     output_data['tag_id'].append(tag_id)
     output_data['tvec'].append(tvec)
     output_data['rvec'].append(rvec)
-
+    R = cv2.Rodrigues(rvec)
+    R = (R[0])
     R = np.identity(3)
+    f = np.c_[ R, tvec ]  
+    P = np.dot(cameraMatrix , R)
+    print(P)
+    output_data['p11'].append(P[0][0])
+    output_data['p12'].append(P[0][1])
+    output_data['p13'].append(P[0][2])
+    output_data['p21'].append(P[1][0])
+    output_data['p22'].append(P[1][1])
+    output_data['p23'].append(P[1][2])
+    output_data['p31'].append(P[2][0])
+    output_data['p32'].append(P[2][1])
+    output_data['p33'].append(P[2][2])
+    P = P[:,:3]
     ds = np.identity(3)
     mapx = numpy.ndarray(shape=(IMAGE_RESOLUTION[0], IMAGE_RESOLUTION[1], 1), dtype='float32')
     mapy = numpy.ndarray(shape=(IMAGE_RESOLUTION[0], IMAGE_RESOLUTION[1], 1), dtype='float32')
