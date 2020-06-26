@@ -62,6 +62,7 @@ for EXP in "${EXPERIMENTS[@]}"; do
     TEST_IMAGE="${INPUT}"
     IN_FILE="${INPUT}"
     SAMPLENR="sample_$i"
+    i=$((i+1))
 
     OUT_DIR="${TESTS_DIR}/${SAMPLENR}/${EXP}"
     # make out dir
@@ -101,15 +102,6 @@ for EXP in "${EXPERIMENTS[@]}"; do
       )
     fi
     i=i+1
-            #--p11=$P11 \
-            #--p12=$P12 \
-            #--p13=$P13 \
-            #--p21=$P21 \
-            #--p22=$P22 \
-            #--p23=$P23 \
-            #--p31=$P31 \
-            #--p32=$P32 \
-            #--p33=$P33 \
   done
 
   # create viewer

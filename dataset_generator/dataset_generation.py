@@ -13,8 +13,8 @@ IMAGE_RESOLUTION = (480, 640)
 ROTATION_RANGES = ([-0.1 * np.pi, -0.1 * np.pi, -0.1 * np.pi], [0.1 * np.pi, 0.1 * np.pi, 0.1 * np.pi])
 TRANSLATION_RANGES = ([-0.2, -0.2, 0.05], [0.2, 0.2, 0.5])
 
-ranges = {'fx': (320.0, 480.0),
-          'fy': (320.0, 480.0),
+ranges = {'fx': (310.0, 330.0),
+          'fy': (310.0, 330.0),
           'cx': (320 - 40, 320 + 40),
           'cy': (240 - 20, 240 + 20),
           'k1': (-2.0, 0.0),
@@ -195,7 +195,6 @@ for im_idx in range(1):
     R = np.identity(3)
     f = np.c_[ R, tvec ]  
     P = np.dot(cameraMatrix , R)
-    print(P)
     output_data['p11'].append(P[0][0])
     output_data['p12'].append(P[0][1])
     output_data['p13'].append(P[0][2])
