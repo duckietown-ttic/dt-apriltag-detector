@@ -3,7 +3,7 @@
 source /environment.sh
 
 # initialize launch file
-dt_launchfile_init
+dt-launchfile-init
 
 # YOUR CODE BELOW THIS LINE
 # ----------------------------------------------------------------------------
@@ -64,5 +64,5 @@ done
 # ----------------------------------------------------------------------------
 # YOUR CODE ABOVE THIS LINE
 
-# terminate launch file
-dt_launchfile_terminate
+# wait for app to end
+dt-launchfile-join

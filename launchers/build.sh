@@ -3,7 +3,7 @@
 source /environment.sh
 
 # initialize launch file
-dt_launchfile_init
+dt-launchfile-init
 
 # YOUR CODE BELOW THIS LINE
 # ----------------------------------------------------------------------------
@@ -19,5 +19,5 @@ dt_exec catkin build --workspace /code/catkin_ws/
 # ----------------------------------------------------------------------------
 # YOUR CODE ABOVE THIS LINE
 
-# terminate launch file
-dt_launchfile_terminate
+# wait for app to end
+dt-launchfile-join
