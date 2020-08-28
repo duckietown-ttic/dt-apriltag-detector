@@ -1,0 +1,13 @@
+<launch>
+    <arg name="info" default="/autobot04/camera_node/camera_info" />
+    <arg name="image" default="/autobot04/camera_node/image" />
+
+    <node pkg="image_transport" type="republish" name="image_transport_decoder" args="compressed in:=$(arg image) raw out:=$(arg image)/raw" output="screen" />
+
+    <remap from="/image_raw" to="$(arg image)/raw" />
+    <remap from="/camera_info" to="$(arg info)" />
+    <node pkg="image_proc" type="image_proc" name="image_proc_node" output="screen" />
+
+    <node pkg="apriltag_simulator" type="overlay_camera_center_guidelines" name="overlay_camera_center_guidelines_node" output="screen" />
+
+</launch>

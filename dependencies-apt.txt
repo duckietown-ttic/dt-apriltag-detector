@@ -1,2 +1,7 @@
 # LIST YOUR APT PACKAGES HERE
 imagemagick
+
+# these are temporary, use them from the new dt-base-env image
+ros-kinetic-image-transport
+ros-kinetic-image-transport-plugins
+ros-kinetic-image-proc

@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+import rospy
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
+
+bridge = CvBridge()
+
+pub1 = None
+pub2 = None
+CX = 316.67543972340775
+CY = 245.14509164835428
+
+
+def _cbImg(msg):
+    cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8')
+    cv_image[int(CY), :] = [255, 0, 0]
+    cv_image[:, int(CX)] = [255, 0, 0]
+    return bridge.cv2_to_imgmsg(cv_image, encoding="rgb8")
+
+
+def cbImg1(msg):
+    if pub1 is not None:
+        pub1.publish(_cbImg(msg))
+
+
+def cbImg2(msg):
+    if pub2 is not None:
+        pub2.publish(_cbImg(msg))
+
+
+if __name__ == '__main__':
+    rospy.init_node("camera_center_guidelines_node")
+    rospy.Subscriber("/image_rect_color", Image, cbImg1, queue_size=1)
+    pub1 = rospy.Publisher("/autobot04/camera_node/image/rect/guided", Image, queue_size=1)
+    rospy.Subscriber("/autobot04/camera_node/image/raw", Image, cbImg2, queue_size=1)
+    pub2 = rospy.Publisher("/autobot04/camera_node/image/raw/guided", Image, queue_size=1)
+    rospy.spin()
+
+
