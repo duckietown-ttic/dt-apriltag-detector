@@ -1,0 +1,12 @@
+camera_name: asus_xtion
+image_width: 640
+image_height: 480
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [535.537849302441, 0, 317.048839304563, 0, 536.621527560867, 243.606017084766, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.0421574592127302, -0.107080301498854, -0.000414736581588972, 0.00256936570547224, 0]

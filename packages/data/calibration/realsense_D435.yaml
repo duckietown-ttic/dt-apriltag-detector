@@ -1,0 +1,12 @@
+camera_name: realsense_d435
+image_width: 640
+image_height: 480
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [698.05435, 0, 341.80897, 0, 697.6091, 227.25731, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.19437, -0.6185, 0.00188, 0.0003, 0]
