@@ -1,0 +1,12 @@
+camera_name: nao_camera_src0_res2
+image_width: 640
+image_height: 480
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [556.845054830986, 0, 309.366895338178, 0, 555.898679730161, 230.592233628776, 0, 0, 1]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [-0.0545211535376379, 0.0691973423510287, -0.00241094929163055, -0.00112245009306511, 0]

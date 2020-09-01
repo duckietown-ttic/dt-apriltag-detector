@@ -1,0 +1,14 @@
+camera_name: cozmo_camera
+image_height: 240
+image_width: 320
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [289.9859761735648, 0.0, 163.67457016769845, 0.0, 289.7572903404558,
+         114.68658050796701, 0.0, 0.0, 1.0]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.020986440458443105, -0.01755666271998951, 0.0003281616739198983,
+         0.003950101793499419, 0.0]

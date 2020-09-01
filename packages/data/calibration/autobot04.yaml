@@ -1,14 +1,13 @@
-camera_matrix:
-  cols: 3
-  data: [337.95787444325066, 0.0, 316.67543972340775, 0.0, 340.58816603207083, 245.14509164835428,
-    0.0, 0.0, 1.0]
-  rows: 3
 camera_name: autobot04/camera_node
+image_width: 640
+image_height: 480
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [337.95787444325066, 0.0, 316.67543972340775, 0.0, 340.58816603207083, 245.14509164835428, 0.0, 0.0, 1.0]
+distortion_model: plumb_bob
 distortion_coefficients:
+  rows: 1
   cols: 5
   data: [-0.2777892847617536, 0.055958330433604465, 0.0013905615512875315, 0.0004744636524149875,
     0.0]
-  rows: 1
-distortion_model: plumb_bob
-image_height: 480
-image_width: 640

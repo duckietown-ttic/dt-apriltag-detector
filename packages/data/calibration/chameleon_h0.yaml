@@ -1,12 +1,12 @@
+camera_name: chameleon_h0/camera_node
+image_width: 1296
+image_height: 964
 camera_matrix:
+  rows: 3
   cols: 3
   data: [603.53925622, 0.0, 631.2826309, 0.0, 605.34379842, 506.37125114, 0.0, 0.0, 1.0]
-  rows: 3
-camera_name: chameleon_h0/camera_node
+distortion_model: plumb_bob
 distortion_coefficients:
+  rows: 1
   cols: 5
   data: [-0.30335195, 0.141782, -0.0005192, -0.04105515, 0.00057303]
-  rows: 1
-distortion_model: plumb_bob
-image_height: 1296
-image_width: 964
