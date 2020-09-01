@@ -12,12 +12,3 @@ distortion_coefficients:
 distortion_model: plumb_bob
 image_height: 480
 image_width: 640
-projection_matrix:
-  cols: 4
-  data: [221.0287628173828, 0.0, 317.61728623130693, 0.0, 0.0, 223.6223907470703,
-    248.12539510886927, 0.0, 0.0, 0.0, 1.0, 0.0]
-  rows: 3
-rectification_matrix:
-  cols: 3
-  data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-  rows: 3
