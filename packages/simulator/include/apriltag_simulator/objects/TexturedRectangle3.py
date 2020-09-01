@@ -14,13 +14,20 @@ class TexturedRectangle3(Rectangle3):
             raise ValueError('Could not load texture file "%s"' % self._texture_file)
         self._texture = imread(self._texture_file)[:, :, 0:3].transpose((1, 0, 2))
 
+    def points(self, steps_x=None, steps_y=None):
+        if steps_x is None:
+            steps_x = self._dimensions[0] / self._optimal_step()
+        if steps_y is None:
+            steps_y = self._dimensions[1] / self._optimal_step()
+        # ---
+        for i in np.linspace(0, 1, int(steps_x)):
+            for j in np.linspace(0, 1, int(steps_y)):
+                point3w = self.transform_to_world(self._get_point(i, j, 0))
+                color3 = self._get_uv_mapping(i, j)
+                yield point3w, color3
+
     def _get_uv_mapping(self, x, y, *_):
         w, h = self._texture.shape[0]-1, self._texture.shape[1]-1
         u = int(min(w, max(0, x * w)))
         v = int(min(h, max(0, y * h)))
         return self._texture[u, v] * 255
-
-    def __iter__(self):
-        for (i, j), p in self.__enumerated_iter__():
-            rgb = self._get_uv_mapping(i, j)
-            yield rgb, p

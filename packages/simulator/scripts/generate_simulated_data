@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+import os
+import time
+import yaml
+import glob
+import json
+import logging
+import numpy as np
+from itertools import product
+import matplotlib.pyplot as plt
+
+from apriltag_simulator.Camera import Camera
+from apriltag_simulator.Scene import Scene
+from apriltag_simulator.exceptions import ObjectOutOfXBounds, ObjectOutOfYBounds
+from apriltag_simulator.lenses import FishEyeLens
+from apriltag_simulator.objects import TexturedRectangle3
+from apriltag_simulator.utils import ProgressBar
+
+logging.basicConfig()
+logger = logging.getLogger('apriltag_simulator')
+logger.setLevel(logging.DEBUG)
+
+TAG_ID = 0
+RECT_W_M = 0.1
+RECT_H_M = 0.1
+TAG_RATIO = 0.8
+TAG_Z_STEP_M = 0.1
+TAG_Z_FIRST_M = 0.07
+TAG_Z_MIN_M = 0.1
+TAG_Z_MAX_M = 1.51
+TAG_RPY_STEP_DEG = 15
+TAG_RPY_MIN_DEG = -45
+TAG_RPY_MAX_DEG = 46
+DEBUG = False
+
+TAG_XY_STEP_M = lambda _z: 0.05 if _z <= 0.2 else (0.4 if _z >= 1.0 else 0.1)
+
+DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', 'data')
+SIM_DATA_DIR = os.path.join(DATA_DIR, 'simulator')
+CAMERAS = glob.glob(os.path.join(DATA_DIR, 'calibration', '*.yaml'))
+TAG_IMG = os.path.join(SIM_DATA_DIR, 'tags', 'tag%d.png' % TAG_ID)
+ANGLE_RANGE = list(np.arange(TAG_RPY_MIN_DEG, TAG_RPY_MAX_DEG, TAG_RPY_STEP_DEG).tolist())
+# TODO: no orientation
+ANGLE_RANGE = [0]
+
+formatted = lambda f: ('%.2f' % f).rstrip('0').rstrip('.')
+
+
+for camera_file in CAMERAS:
+    camera_filename = os.path.basename(camera_file)
+    camera_name = os.path.splitext(camera_filename)[0]
+    print('Using camera "%s"...' % camera_name)
+
+    camera_info_file = os.path.join(DATA_DIR, 'calibration', camera_filename)
+    camera_info = yaml.load(open(camera_info_file, 'rt'), Loader=yaml.SafeLoader)
+    FX, _, CX, _, FY, CY, _, _, _ = camera_info['camera_matrix']['data']
+
+    camera = Camera.from_camera_info('camera1', camera_info)
+
+    lens = FishEyeLens.from_camera_info('lens1', camera_info)
+
+    camera.attach_lens(lens)
+
+    Z = [TAG_Z_FIRST_M] + list(np.arange(TAG_Z_MIN_M, TAG_Z_MAX_M, TAG_Z_STEP_M).tolist())
+    tot_data_points = (len(ANGLE_RANGE) ** 3) * len(Z)
+    cur_data_point = 0
+    hits_since_y = 0
+    pbar = ProgressBar()
+
+    i = -1
+    for z in Z:
+        cur_data_dir = os.path.join(
+            DATA_DIR,
+            'simulated',
+            camera_name,
+            'z%dcm' % int(z * 100)
+        )
+
+        out_file = lambda cam, ext, x, y, z, r, p, w: \
+            os.path.join(
+                cur_data_dir,
+                'x%s_y%s_r%d_p%d_w%d.%s' % (str(np.round(x, 2)), str(np.round(y, 2)), r, p, w, ext)
+            )
+
+        os.makedirs(cur_data_dir, exist_ok=True)
+        print(f'\nz = {z}')
+        for r, p, w in product(ANGLE_RANGE, ANGLE_RANGE, ANGLE_RANGE):
+            rpy = (np.deg2rad(r), np.deg2rad(p), np.deg2rad(w))
+            x, y = 0, 0
+            hits, hits_since_y = 0, 0
+            max_x = 0
+
+            # pbar.update(0)
+            while True:
+                xys = {(-x, -y), (x, -y), (x, y), (-x, y)}
+                hits = 0
+
+                for _x, _y in xys:
+                    i += 1
+                    xyz = [_x, _y, z]
+                    # create output files
+                    out_png = out_file(camera_name, 'png', _x, _y, z, r, p, w)
+                    out_json = out_file(camera_name, 'json', _x, _y, z, r, p, w)
+
+                    print('Target: ' + '/'.join(out_png.split('/')[-2:]).rstrip('.png'))
+
+                    if not os.path.isfile(out_json):
+                        meta = {
+                            'camera': camera_name,
+                            'tags': {
+                                TAG_ID: {
+                                    'size': [RECT_W_M * TAG_RATIO, RECT_H_M * TAG_RATIO],
+                                    'container_size': [RECT_W_M, RECT_H_M],
+                                    'position': xyz,
+                                    'orientation': [r, p, y]
+                                }
+                            },
+                            'success': False
+                        }
+
+                        obj = TexturedRectangle3('tag0', TAG_IMG, [RECT_W_M, RECT_H_M], xyz, rpy)
+                        scene = Scene('scene1')
+                        scene.add(obj)
+                        try:
+                            stime = time.time()
+                            img = camera.render(scene, bgcolor=125, scream=True, progress=True)
+                            logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
+                            hits += 1
+                            hits_since_y += 1
+                            meta['success'] = True
+
+                            plt.imsave(out_png, img.transpose((1, 0, 2)))
+
+                            if DEBUG:
+                                imgplot = plt.imshow(img.transpose((1, 0, 2)))
+                                plt.show()
+                        except (ObjectOutOfXBounds, ObjectOutOfYBounds):
+                            logger.debug('out-of-bounds')
+                            pass
+                        with open(out_json, 'wt') as fout:
+                            json.dump(meta, fout, indent=4, sort_keys=True)
+
+                step = TAG_XY_STEP_M(z)
+                if hits == 0 and x > max_x:
+                    if hits_since_y == 0:
+                        # time to stop
+                        break
+                    # time to increase y
+                    logger.debug(f'y: {np.round(y, 2)} -> {np.round(y + step, 2)}')
+                    y += step
+                    x = 0
+                    hits_since_y = 0
+                else:
+                    # there was at least on hit, increase x
+                    logger.debug(f'x: {np.round(x, 2)} -> {np.round(x + step, 2)} | {np.round(max_x, 2)}')
+                    max_x = max(x, max_x)
+                    x += step
+            # ---
+            # pbar.update(100 * cur_data_point / tot_data_points)
+            # print()
+
+# tag0 = TexturedRectangle3('tag0', TAG_IMG, [RECT_W_M, RECT_H_M], xyz=OBJ_XYZ, rpy=OBJ_RPY)
+#
+# scene = Scene('scene1')
+# scene.add(tag0)
+#
+# stime = time.time()
+# img = camera.render(scene, bgcolor=125)
+# if DEBUG:
+#     print('Done in %.1f secs' % (time.time() - stime))
+#
+# # grey image
+# grey_img = np.array(Image.fromarray(img.astype('uint8'), 'RGB').convert('LA'))[:, :, 0].transpose((1, 0))
+#
+# # detect tag
+# detector = Detector()
+# detections = detector.detect(grey_img, True, [FX, FY, CX, CY], tag_size=RECT_W_M * TAG_RATIO)
+#
+# if DEBUG:
+#     print('Detected %d tags' % len(detections))
+#     for detection in detections:
+#         print('Error[X]: %.2f cm' % float(100 * abs(detection.pose_t.T[0][0] - OBJ_XYZ[0])))
+#         print('Error[Y]: %.2f cm' % float(100 * abs(detection.pose_t.T[0][1] - OBJ_XYZ[1])))
+#         print('Error[Z]: %.2f cm' % float(100 * abs(detection.pose_t.T[0][2] - OBJ_XYZ[2])))
+#         print('Error: %.2f cm' % (100 * np.linalg.norm(detection.pose_t.T - OBJ_XYZ)))
+#
+#
+# if DEBUG:
+#     imgplot = plt.imshow(img.transpose((1, 0, 2)))
+#
+#     # draw detections
+#     for detection in detections:
+#         skirt = 1
+#         corners = np.zeros_like(detection.corners)
+#         corners[detection.corners[:, 0] > detection.center[0], 0] = np.ceil(
+#             detection.corners[detection.corners[:, 0] > detection.center[0], 0]).astype(np.int32) + skirt
+#         corners[detection.corners[:, 1] > detection.center[1], 1] = np.ceil(
+#             detection.corners[detection.corners[:, 1] > detection.center[1], 1]).astype(np.int32) + skirt
+#
+#         corners[detection.corners[:, 0] <= detection.center[0], 0] = np.floor(
+#             detection.corners[detection.corners[:, 0] <= detection.center[0], 0]).astype(np.int32) - skirt
+#         corners[detection.corners[:, 1] <= detection.center[1], 1] = np.floor(
+#             detection.corners[detection.corners[:, 1] <= detection.center[1], 1]).astype(np.int32) - skirt
+#
+#         plt.plot(
+#             np.append(corners[:, 0], [corners[0, 0]]),
+#             np.append(corners[:, 1], [corners[0, 1]]),
+#             linewidth=4
+#         )
+#
+#     plt.show()

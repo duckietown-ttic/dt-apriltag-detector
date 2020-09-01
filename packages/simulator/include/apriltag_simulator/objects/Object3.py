@@ -1,11 +1,12 @@
+import numpy as np
+
 from abc import abstractmethod
 from apriltag_simulator.utils import transformations
 
 
 class Object3:
 
-    ITERATOR_STEP_M = 0.0001
-    # ITERATOR_STEP_M = 0.0003
+    DEFAULT_STEP_M = 0.0001
 
     def __init__(self, name, xyz=None, rpy=None):
         if xyz is None:
@@ -13,17 +14,32 @@ class Object3:
         if rpy is None:
             rpy = [0, 0, 0]
         self._name = name
-        self._xyz = xyz
-        self._rpy = rpy
+        self._xyz = list(xyz)
+        self._rpy = list(rpy)
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def to_world_matrix(self):
         return transformations.compose_matrix(translate=self._xyz, angles=self._rpy)
 
-    @abstractmethod
-    def _get_point(self, x, y, z):
-        raise NotImplementedError('The iterator method should be implemented by the child classes')
+    def transform_to_world(self, p):
+        if isinstance(p, np.ndarray):
+            p = p.tolist()
+        if len(p) == 3:
+            p = p + [1]
+        return np.dot(self.to_world_matrix, p)[0:3]
 
     @abstractmethod
-    def __iter__(self):
-        raise NotImplementedError('The iterator method should be implemented by the child classes')
+    def shadow_polygon(self):
+        raise NotImplementedError('The `shadow_polygon` method must be implemented by child classes')
+
+    @abstractmethod
+    def points(self, steps_x=None, steps_y=None):
+        raise NotImplementedError('The `points` method must be implemented by child classes')
+
+    @abstractmethod
+    def _get_point(self, x, y, z):
+        raise NotImplementedError('The `_get_point` method must be implemented by child classes')

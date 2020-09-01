@@ -5,6 +5,11 @@ import numpy as np
 
 class FishEyeLens(CameraLens):
 
+    @staticmethod
+    def from_camera_info(name, camera_info):
+        K1, K2, P1, P2, K3 = camera_info['distortion_coefficients']['data']
+        return FishEyeLens(name, K1, K2, K3, P1, P2)
+
     def __init__(self, name, k1=0, k2=0, k3=0, p1=0, p2=0):
         CameraLens.__init__(self, name)
         self._name = name
@@ -22,6 +27,4 @@ class FishEyeLens(CameraLens):
             2 * self._p1 * x * y + self._p2 * ((r ** 2) + 2 * (x ** 2)),
             2 * self._p2 * x * y + self._p1 * ((r ** 2) + 2 * (y ** 2))
         ])
-        # TODO: remove this
-        # return radial
         return np.add(radial, tangential)
