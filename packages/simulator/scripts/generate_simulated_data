@@ -83,7 +83,7 @@ for camera_file in CAMERAS:
             )
 
         os.makedirs(cur_data_dir, exist_ok=True)
-        print(f'\nz = {z}')
+        print(f'\nz = {np.round(z, 2)}')
         for r, p, w in product(ANGLE_RANGE, ANGLE_RANGE, ANGLE_RANGE):
             rpy = (np.deg2rad(r), np.deg2rad(p), np.deg2rad(w))
             x, y = 0, 0
