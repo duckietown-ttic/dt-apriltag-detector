@@ -127,7 +127,8 @@ class Camera(object):
             [-1,  0],          [1,  0],
             [-1,  1], [0,  1], [1,  1]
         ]
-        indices = np.unique(np.argwhere(img == -1)[:, 0:2], axis=0)
+        empty_pixels = np.argwhere(img == -1)[:, 0:2]
+        indices = np.unique(empty_pixels, axis=0) if len(empty_pixels) else []
 
         # fill -1 pixels with the most common color among the neighboring ones
         for pixel in indices:
