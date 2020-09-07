@@ -8,7 +8,7 @@ from .Rectangle3 import Rectangle3
 class TexturedRectangle3(Rectangle3):
 
     def __init__(self, name, texture, dimensions, xyz=None, rpy=None):
-        Rectangle3.__init__(self, name, dimensions, xyz, rpy)
+        Rectangle3.__init__(self, name, dimensions, 0, xyz, rpy)
         self._texture_file = texture
         if not os.path.exists(self._texture_file) or not os.path.isfile(self._texture_file):
             raise ValueError('Could not load texture file "%s"' % self._texture_file)

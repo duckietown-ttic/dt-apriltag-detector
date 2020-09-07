@@ -24,20 +24,23 @@ TAG_ID = 0
 RECT_W_M = 0.1
 RECT_H_M = 0.1
 TAG_RATIO = 0.8
-TAG_Z_STEP_M = 0.1
-TAG_Z_FIRST_M = 0.07
-TAG_Z_MIN_M = 0.1
-TAG_Z_MAX_M = 1.51
+# TAG_Z_STEP_M = 0.1
+# TAG_Z_FIRST_M = 0.07
+# TAG_Z_MIN_M = 0.1
+# TAG_Z_MAX_M = 0.71
+Z = [0.07, 0.1, 0.2, 0.4, 0.7]
 TAG_RPY_STEP_DEG = 15
 TAG_RPY_MIN_DEG = -45
 TAG_RPY_MAX_DEG = 46
+USE_CAMERA_WITH_MAX_DISTORTION_PX = 200
 DEBUG = False
 
 TAG_XY_STEP_M = lambda _z: 0.05 if _z <= 0.2 else (0.4 if _z >= 1.0 else 0.1)
 
 DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', 'data')
 SIM_DATA_DIR = os.path.join(DATA_DIR, 'simulator')
-CAMERAS = glob.glob(os.path.join(DATA_DIR, 'calibration', '*.yaml'))
+# CAMERAS = glob.glob(os.path.join(DATA_DIR, 'calibration', '*.yaml'))
+CAMERAS = glob.glob(os.path.join(DATA_DIR, 'simulated_camera_models', '*', '*.json'))
 TAG_IMG = os.path.join(SIM_DATA_DIR, 'tags', 'tag%d.png' % TAG_ID)
 ANGLE_RANGE = list(np.arange(TAG_RPY_MIN_DEG, TAG_RPY_MAX_DEG, TAG_RPY_STEP_DEG).tolist())
 # TODO: no orientation
@@ -49,10 +52,18 @@ formatted = lambda f: ('%.2f' % f).rstrip('0').rstrip('.')
 for camera_file in CAMERAS:
     camera_filename = os.path.basename(camera_file)
     camera_name = os.path.splitext(camera_filename)[0]
-    print('Using camera "%s"...' % camera_name)
+    print('\nUsing camera "%s"...' % camera_name)
 
-    camera_info_file = os.path.join(DATA_DIR, 'calibration', camera_filename)
-    camera_info = yaml.load(open(camera_info_file, 'rt'), Loader=yaml.SafeLoader)
+    # camera_info = yaml.load(open(camera_file, 'rt'), Loader=yaml.SafeLoader)
+
+    camera_meta = json.load(open(camera_file, 'rt'))
+    camera_info = camera_meta['camera_info']
+    camera_max_distortion_px = int(camera_meta['stats']['max_distortion_px'])
+    if camera_max_distortion_px > USE_CAMERA_WITH_MAX_DISTORTION_PX:
+        print(f'Camera maximum distortion '
+              f'is {camera_max_distortion_px} > {USE_CAMERA_WITH_MAX_DISTORTION_PX}')
+        continue
+
     FX, _, CX, _, FY, CY, _, _, _ = camera_info['camera_matrix']['data']
 
     camera = Camera.from_camera_info('camera1', camera_info)
@@ -61,7 +72,7 @@ for camera_file in CAMERAS:
 
     camera.attach_lens(lens)
 
-    Z = [TAG_Z_FIRST_M] + list(np.arange(TAG_Z_MIN_M, TAG_Z_MAX_M, TAG_Z_STEP_M).tolist())
+    # Z = [TAG_Z_FIRST_M] + list(np.arange(TAG_Z_MIN_M, TAG_Z_MAX_M, TAG_Z_STEP_M).tolist())
     tot_data_points = (len(ANGLE_RANGE) ** 3) * len(Z)
     cur_data_point = 0
     hits_since_y = 0
@@ -83,7 +94,7 @@ for camera_file in CAMERAS:
             )
 
         os.makedirs(cur_data_dir, exist_ok=True)
-        print(f'\nz = {np.round(z, 2)}')
+        print(f'z = {np.round(z, 2)}\n---------------')
         for r, p, w in product(ANGLE_RANGE, ANGLE_RANGE, ANGLE_RANGE):
             rpy = (np.deg2rad(r), np.deg2rad(p), np.deg2rad(w))
             x, y = 0, 0

@@ -5,11 +5,13 @@ import numpy as np
 
 class Rectangle3(Object3):
 
-    def __init__(self, name, dimensions=None, xyz=None, rpy=None):
+    def __init__(self, name, dimensions=None, color=255, xyz=None, rpy=None):
         Object3.__init__(self, name, xyz, rpy)
         if dimensions is None:
             dimensions = [1, 1]
         self._dimensions = dimensions
+        self._color = color if isinstance(color, (list, tuple)) else (
+            [color, color, color] if isinstance(color, int) else [255] * 3)
 
     def shadow_polygon(self):
         poly = np.array([
@@ -38,7 +40,7 @@ class Rectangle3(Object3):
         for i in np.linspace(0, 1, int(steps_x)):
             for j in np.linspace(0, 1, int(steps_y)):
                 point3w = self.transform_to_world(self._get_point(i, j, 0))
-                yield point3w, None
+                yield point3w, self._color
 
     def _get_point(self, x, y, *_):
         return np.array([(x - 0.5) * self._dimensions[0], (y - 0.5) * self._dimensions[1], 0])
