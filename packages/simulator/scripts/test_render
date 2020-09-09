@@ -60,7 +60,7 @@ for offset in []: #[-0.2, -0.1, 0, 0.1, 0.2]:
 
 stime = time.time()
 # img = camera.render(scene, bgcolor=125, scream=False, progress=True, refine=False)
-img = camera.render2(scene, bgcolor=125, progress=True)
+img = camera.render(scene, bgcolor=125, progress=True)
 logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
 
 if DEBUG:
