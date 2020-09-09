@@ -105,7 +105,7 @@ for lens in lenses:
                     "camera_matrix": {
                         "rows": 3,
                         "cols": 3,
-                        "data": [fx, 0.0, cx, 0.0, fy, cy, 0.0, 0.0, 1.0]
+                        "data": [fx, 0, cx, 0, fy, cy, 0, 0, 1]
                     },
                     "distortion_model": "plumb_bob",
                     "distortion_coefficients": {
