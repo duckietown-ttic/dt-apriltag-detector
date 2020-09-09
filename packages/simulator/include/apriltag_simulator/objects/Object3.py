@@ -16,6 +16,9 @@ class Object3:
         self._name = name
         self._xyz = list(xyz)
         self._rpy = list(rpy)
+        # create obj_frame -> world transformation
+        self._to_world = transformations.compose_matrix(translate=self._xyz, angles=self._rpy)
+        self._from_world = transformations.inverse_matrix(self._to_world)
 
     @property
     def name(self):
@@ -23,7 +26,11 @@ class Object3:
 
     @property
     def to_world_matrix(self):
-        return transformations.compose_matrix(translate=self._xyz, angles=self._rpy)
+        return self._to_world
+
+    @property
+    def from_world_matrix(self):
+        return self._from_world
 
     def transform_to_world(self, p):
         if isinstance(p, np.ndarray):
@@ -31,6 +38,13 @@ class Object3:
         if len(p) == 3:
             p = p + [1]
         return np.dot(self.to_world_matrix, p)[0:3]
+
+    def transform_from_world(self, p):
+        if isinstance(p, np.ndarray):
+            p = p.tolist()
+        if len(p) == 3:
+            p = p + [1]
+        return np.dot(self.from_world_matrix, p)[0:3]
 
     @abstractmethod
     def shadow_polygon(self):

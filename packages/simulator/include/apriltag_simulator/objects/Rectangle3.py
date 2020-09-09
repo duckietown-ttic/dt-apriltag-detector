@@ -1,4 +1,5 @@
 from .Object3 import Object3
+from .utils import isect_line_plane_v3
 
 import numpy as np
 
@@ -12,6 +13,8 @@ class Rectangle3(Object3):
         self._dimensions = dimensions
         self._color = color if isinstance(color, (list, tuple)) else (
             [color, color, color] if isinstance(color, int) else [255] * 3)
+        self._plane_center = self.transform_to_world(self._get_point(0.5, 0.5, 0))
+        self._plane_normal = self.transform_to_world([0, 0, -1])
 
     def shadow_polygon(self):
         poly = np.array([
@@ -41,6 +44,16 @@ class Rectangle3(Object3):
             for j in np.linspace(0, 1, int(steps_y)):
                 point3w = self.transform_to_world(self._get_point(i, j, 0))
                 yield point3w, self._color
+
+    def intersect(self, ray3w):
+        camera_center = [0, 0, 0]
+        intersection_w = \
+            isect_line_plane_v3(camera_center, ray3w, self._plane_center, self._plane_normal)
+        intersection = self.transform_from_world(intersection_w)
+        if abs(intersection[0]) <= self._dimensions[0] * 0.5 and \
+                abs(intersection[1]) <= self._dimensions[1] * 0.5:
+            return intersection_w, self._color
+        return None, None
 
     def _get_point(self, x, y, *_):
         return np.array([(x - 0.5) * self._dimensions[0], (y - 0.5) * self._dimensions[1], 0])
