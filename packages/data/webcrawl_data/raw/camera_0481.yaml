@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 901.1007
+  - 0.0
+  - 698.2947
+  - 0.0
+  - 897.0639
+  - 237.7447
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3
+camera_name: karlsruhe
+distortion_coefficients:
+  cols: 5
+  data:
+  - -0.3686011
+  - 0.1908666
+  - -0.0005689518
+  - 0.0003332341
+  - -0.06302873
+  rows: 1
+distortion_model: plumb_bob
+image_height: 512
+image_width: 1392
+projection_matrix:
+  cols: 4
+  data:
+  - 707.0493
+  - 0.0
+  - 604.0814
+  - -334.1081
+  - 0.0
+  - 707.0493
+  - 180.5066
+  - 2.33066
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.003201153
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 0.9998134
+  - -0.006606294
+  - 0.01815174
+  - 0.006637329
+  - 0.9999766
+  - -0.001650024
+  - -0.01814042
+  - 0.001770195
+  - 0.9998339
+  rows: 3

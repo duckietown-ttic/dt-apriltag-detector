@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 502.7440581945348
+  - 0.0
+  - 311.0525846512331
+  - 0.0
+  - 500.8661832052362
+  - 242.34662752791493
+  - 0.0
+  - 0.0
+  - 1
+  rows: 3
+camera_name: naboris_stereo/left
+distortion_coefficients:
+  cols: 5
+  data:
+  - 0.1639958233797625
+  - -0.271840030972792
+  - 0.001055841660100477
+  - -0.00166555973740089
+  - 0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 480
+image_width: 720
+projection_matrix:
+  cols: 4
+  data:
+  - 513.9486947408536
+  - 0.0
+  - 309.71340650959206
+  - 0.0
+  - 0.0
+  - 513.7239424542684
+  - 242.7406237983761
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  rows: 3

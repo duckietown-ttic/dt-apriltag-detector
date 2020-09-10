@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 1886.849633
+  - 0
+  - 448.589891
+  - 0
+  - 1910.422901
+  - 445.059852
+  - 0
+  - 0
+  - 1
+  rows: 3
+camera_name: prosilica
+distortion_coefficients:
+  cols: 5
+  data:
+  - -0.058805
+  - 1.15327
+  - 0.000323
+  - -0.023318
+  - 0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 480
+image_width: 640
+projection_matrix:
+  cols: 4
+  data:
+  - 1916.07812
+  - 0
+  - 443.117654
+  - 0
+  - 0
+  - 1938.531134
+  - 443.971643
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  rows: 3

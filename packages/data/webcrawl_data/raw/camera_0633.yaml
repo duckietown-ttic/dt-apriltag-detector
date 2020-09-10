@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 1620.074305
+  - 0.0
+  - 999.997358
+  - 0.0
+  - 1608.670939
+  - 551.660015
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3
+camera_name: seecam
+distortion_coefficients:
+  cols: 5
+  data:
+  - -0.363743
+  - 0.118477
+  - -0.004066
+  - -0.005029
+  - 0.0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 1080
+image_width: 1920
+projection_matrix:
+  cols: 4
+  data:
+  - 1381.206055
+  - 0.0
+  - 999.31396
+  - 0.0
+  - 0.0
+  - 1539.852295
+  - 550.111827
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3

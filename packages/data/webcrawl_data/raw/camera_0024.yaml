@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 412.409090435529
+  - 0
+  - 633.199753878066
+  - 0
+  - 411.276693151817
+  - 354.035414071065
+  - 0
+  - 0
+  - 1
+  rows: 3
+camera_name: baxter_left
+distortion_coefficients:
+  cols: 5
+  data:
+  - -0.0380089811627213
+  - -0.00227525201643936
+  - 0.00488764191623164
+  - -0.000184533348271161
+  - 0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 800
+image_width: 1280
+projection_matrix:
+  cols: 4
+  data:
+  - 349.532562255859
+  - 0
+  - 626.755670697003
+  - 0
+  - 0
+  - 394.392272949219
+  - 355.751213686395
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  rows: 3

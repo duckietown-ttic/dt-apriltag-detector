@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 667.621249
+  - 0
+  - 334.641953
+  - 0
+  - 671.269284
+  - 264.567343
+  - 0
+  - 0
+  - 1
+  rows: 3
+camera_name: creative_cam
+distortion_coefficients:
+  cols: 5
+  data:
+  - 0.046315
+  - -0.348939
+  - -0.000615
+  - 0.003354
+  - 0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 480
+image_width: 640
+projection_matrix:
+  cols: 4
+  data:
+  - 661.360046
+  - 0
+  - 337.1724
+  - 0
+  - 0
+  - 671.352966
+  - 264.722067
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  rows: 3

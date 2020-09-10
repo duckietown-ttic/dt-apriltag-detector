@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 537.292878
+  - 0.0
+  - 427.331854
+  - 0.0
+  - 527.000348
+  - 240.226888
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3
+camera_name: bebop_front
+distortion_coefficients:
+  cols: 5
+  data:
+  - 0.004974
+  - -0.00013
+  - -0.001212
+  - 0.002192
+  - 0.0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 480
+image_width: 856
+projection_matrix:
+  cols: 4
+  data:
+  - 539.403503
+  - 0.0
+  - 429.275072
+  - 0.0
+  - 0.0
+  - 529.838562
+  - 238.941372
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3

@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 932.254857
+  - 0.0
+  - 686.054068
+  - 0.0
+  - 932.224059
+  - 378.339021
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3
+camera_name: zbook_webcam
+distortion_coefficients:
+  cols: 5
+  data:
+  - -0.02186
+  - 0.024749
+  - 0.001691
+  - 0.001944
+  - 0.0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 720
+image_width: 1280
+projection_matrix:
+  cols: 4
+  data:
+  - 929.171448
+  - 0.0
+  - 688.47201
+  - 0.0
+  - 0.0
+  - 930.574036
+  - 379.492741
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3

@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 539.0327086493677
+  - 0
+  - 317.1044839776039
+  - 0
+  - 534.0880245154518
+  - 235.2456188693766
+  - 0
+  - 0
+  - 1
+  rows: 3
+camera_name: rgb_PS1080_PrimeSense
+distortion_coefficients:
+  cols: 5
+  data:
+  - 0.02948786824858255
+  - -0.0952449316558146
+  - 0.003074222683515178
+  - -0.001764557666821695
+  - 0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 480
+image_width: 640
+projection_matrix:
+  cols: 4
+  data:
+  - 537.4388427734375
+  - 0
+  - 315.4725390719323
+  - 0
+  - 0
+  - 534.3013305664062
+  - 235.7571481301511
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  rows: 3

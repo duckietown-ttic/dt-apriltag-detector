@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 615.373519771983
+  - 0
+  - 331.8001629831776
+  - 0
+  - 614.2095128543981
+  - 245.2891524835611
+  - 0
+  - 0
+  - 1
+  rows: 3
+camera_name: laptop
+distortion_coefficients:
+  cols: 5
+  data:
+  - 0.1587533999581577
+  - -0.22857219064868
+  - 0.006387477363770676
+  - 0.003118364787494989
+  - 0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 480
+image_width: 640
+projection_matrix:
+  cols: 4
+  data:
+  - 634.6784057617188
+  - 0
+  - 333.6335487578472
+  - 0
+  - 0
+  - 632.6680297851562
+  - 247.8841900257466
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  rows: 3

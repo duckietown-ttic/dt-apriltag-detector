@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 612.1825719518471
+  - 0
+  - 258.5589253423354
+  - 0
+  - 594.4900977664436
+  - 212.8844393256715
+  - 0
+  - 0
+  - 1
+  rows: 3
+camera_name: depth_Astra_Orbbec
+distortion_coefficients:
+  cols: 5
+  data:
+  - -0.01226897482670551
+  - 0.04475381285627289
+  - -0.0155041470832233
+  - -0.04673613712298955
+  - 0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 480
+image_width: 640
+projection_matrix:
+  cols: 4
+  data:
+  - 596.9220581054688
+  - 0
+  - 233.6676585478999
+  - 0
+  - 0
+  - 613.8265991210938
+  - 207.510105180836
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  rows: 3

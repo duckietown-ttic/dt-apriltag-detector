@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 500.80696
+  - 0.0
+  - 307.20573
+  - 0.0
+  - 500.39406
+  - 233.52064
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3
+camera_name: bahnhoff
+distortion_coefficients:
+  cols: 5
+  data:
+  - -0.22738
+  - 0.11823
+  - 0.0
+  - 0.0
+  - 0.0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 480
+image_width: 640
+projection_matrix:
+  cols: 4
+  data:
+  - 427.6897775237284
+  - 0
+  - 280.0537910461426
+  - -171329.2478163361
+  - 0
+  - 427.6897775237284
+  - 242.0054302215576
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 0.9927
+  - 0.064186
+  - 0.10209
+  - -0.064523
+  - 0.99792
+  - 0
+  - -0.10187
+  - -0.0065869
+  - 0.99478
+  rows: 3

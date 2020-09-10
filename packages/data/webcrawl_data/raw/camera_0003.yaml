@@ -1,0 +1,55 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 735.398907
+  - 0
+  - 648.351161
+  - 0
+  - 730.684681
+  - 477.883232
+  - 0
+  - 0
+  - 1
+  rows: 3
+camera_name: pgr_1
+distortion_coefficients:
+  cols: 5
+  data:
+  - -0.31945
+  - 0.088928
+  - -0.002057
+  - 0.001153
+  - 0
+  rows: 1
+distortion_model: plumb_bob
+image_height: 964
+image_width: 1288
+projection_matrix:
+  cols: 4
+  data:
+  - 539.087158
+  - 0
+  - 650.586247
+  - 0
+  - 0
+  - 610.330566
+  - 472.015478
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  rows: 3
+rectification_matrix:
+  cols: 3
+  data:
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  - 0
+  - 0
+  - 0
+  - 1
+  rows: 3
