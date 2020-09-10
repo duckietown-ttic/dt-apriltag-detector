@@ -9,12 +9,12 @@ import glob
 import pickle
 import logging
 import numpy as np
-import matplotlib.pyplot as plt
+import imageio
 
 from apriltag_simulator.Camera import Camera
 from apriltag_simulator.Scene import Scene
 from apriltag_simulator.lenses import FishEyeLens
-from apriltag_simulator.objects import Rectangle3, TexturedRectangle3
+from apriltag_simulator.objects import TexturedRectangle3
 
 logging.basicConfig()
 logger = logging.getLogger('study_maximum_distortion')
@@ -124,7 +124,7 @@ for camera_no in sorted(camera_infos.keys()):
 
     print('Storing sample rendering... ', end='')
     stime = time.time()
-    plt.imsave(out_png, img.transpose((1, 0, 2)))
+    imageio.imsave(out_png, img.transpose((1, 0, 2)))
     print(f'{int(time.time() - stime)} secs.')
 
     print('Storing stats... ', end='')
