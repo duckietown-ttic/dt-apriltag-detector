@@ -70,6 +70,10 @@ class Camera(object):
         return self._height
 
     @property
+    def aspect_ratio(self):
+        return self._width / self._height
+
+    @property
     def C(self):
         return self._C
 
@@ -251,7 +255,7 @@ class Camera(object):
 
     def render(self, scene, bgcolor=None, num_threads=4, return_stats=False, progress=False):
         img = np.full((self._width, self._height, 3), bgcolor)
-        # split rendering job to num_threads workers
+        # split rendering job into num_threads workers
         pool = Pool(num_threads)
         args = []
         for i in range(num_threads):

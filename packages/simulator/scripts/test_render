@@ -18,12 +18,14 @@ logger.setLevel(logging.DEBUG)
 TAG_ID = 0
 RECT_W_M = 0.1
 RECT_H_M = 0.1
-TAG_RATIO = 0.8
+
+# TAG_RATIO = 0.8
 DEBUG = True
 
 DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', 'data')
 SIM_DATA_DIR = os.path.join(DATA_DIR, 'simulator')
 TAG_IMG = os.path.join(SIM_DATA_DIR, 'tags', 'tag%d.png' % TAG_ID)
+GRID_IMG = os.path.join(SIM_DATA_DIR, 'misc', 'grid.png')
 CAMERA_NAME = 'autobot04'
 # CAMERA_NAME = 'crazy'
 # CAMERA_NAME = 'pinhole'
@@ -40,26 +42,19 @@ camera = Camera.from_camera_info('camera1', camera_info)
 lens = FishEyeLens.from_camera_info('lens1', camera, camera_info)
 camera.attach_lens(lens)
 
+print(f'Lens[{lens.name}] Max Distortion: {lens.maximum_distortion()}px')
+
 xyz = [0, 0, 0.07]
 rpy = [0, 0, 0]
 
 obj = TexturedRectangle3('tag0', TAG_IMG, [RECT_W_M, RECT_H_M], xyz, rpy)
+grid = TexturedRectangle3('grid', GRID_IMG, [2, 2], [0, 0, 0.7], [0, 0, 0])
 # obj = Rectangle3('tag0', [RECT_W_M, RECT_H_M], 255, xyz, rpy)
 scene = Scene('scene1')
 scene.add(obj)
-
-line_len = 2
-for offset in []: #[-0.2, -0.1, 0, 0.1, 0.2]:
-    hline = Rectangle3('hline', [line_len, 0.0004], 0, [0, 0 + offset, 0.2], rpy)
-    vline = Rectangle3('vline', [0.0004, line_len], 0, [0 + offset, 0, 0.2], rpy)
-    scene.add(hline)
-    scene.add(vline)
-
-# line = Rectangle3('line', [0.001, 0.0004], [255, 0, 0], [-0.6, 0, 0.2], rpy)
-# scene.add(line)
+# scene.add(grid)
 
 stime = time.time()
-# img = camera.render(scene, bgcolor=125, scream=False, progress=True, refine=False)
 img = camera.render(scene, bgcolor=125, progress=True)
 logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
 
