@@ -6,7 +6,7 @@ from multiprocessing.pool import Pool
 
 from .CameraLens import CameraLens
 from apriltag_simulator.Camera import Camera
-
+from apriltag_simulator.constants import NUM_THREADS
 
 INF = 9999999999
 
@@ -28,15 +28,22 @@ class FishEyeLens(CameraLens):
         self._p1 = p1
         self._p2 = p2
         self._camera = camera
-        self._map = self._create_map()
+        self._map, self._ph_camera = self._create_map()
+
+    @property
+    def underlying_pinhole_camera(self) -> Camera:
+        return self._ph_camera
 
     def to_pinhole_pixel(self, u: int, v: int) -> np.array:
-        return self._map[u, v]
+        _u, _v = self._map[u, v]
+        return (_u, _v) if (_u != INF and _v != INF) else (None, None)
 
     def maximum_distortion(self):
         m = 0
         for u, v in product(range(self._camera.width), range(self._camera.height)):
             _u, _v = self.to_pinhole_pixel(u, v)
+            if _u is None or _v is None:
+                continue
             _m = np.linalg.norm([u - _u, v - _v])
             m = max(m, _m)
         return m
@@ -61,9 +68,9 @@ class FishEyeLens(CameraLens):
             return _u, _v
         return None, None
 
-    def _create_map(self, num_threads=4):
+    def _create_map(self, num_threads: int = NUM_THREADS) -> (np.array, Camera):
         stime = time.time()
-        lens = np.full((self._camera.width, self._camera.height, 2), -1)
+        lens = np.full((self._camera.width, self._camera.height, 2), INF)
         # find underlying pinhole cameras for inner and outer frame
         (innerW, innerH), (outerW, outerH) = self.find_underlying_pinhole_camera()
         # stats
@@ -85,27 +92,27 @@ class FishEyeLens(CameraLens):
         stime = time.time()
 
         # split vectors generation job into num_threads workers
-        pool = Pool(num_threads)
         args = []
         for i in range(num_threads):
             args.append((i, num_threads, self, self._camera, ph_camera))
         # spin workers
-        res = pool.starmap(lens_map_generation_task, args)
+        with Pool(num_threads) as pool:
+            res = pool.starmap(lens_map_generation_task, args)
         # combine results
         for ma in res:
-            lens = np.ma.where(ma == -1, lens, ma)
+            lens = np.ma.where(ma == INF, lens, ma)
         # profiling
         print(f'Lens map generated in {int(time.time() - stime)} secs')
         stime = time.time()
 
         # fill holes in lens map
         mask_size = 2
-        lensc = np.full((self._camera.width, self._camera.height, 2), -1)
+        lensc = np.full((self._camera.width, self._camera.height, 2), INF)
         # create a mask of size [mask_size x mask_size]
         mask_range = list(range(-mask_size, mask_size + 1, 1))
         neigh_mask = list(product(mask_range, mask_range))
         # find pixels in map with no corresponding rectified pixel
-        empty_pixels = np.argwhere(lens == -1)[:, 0:2]
+        empty_pixels = np.argwhere(lens == INF)[:, 0:2]
         indices = np.unique(empty_pixels, axis=0) if len(empty_pixels) else []
         # use average from neighbors as value for each empty pixel
         for px in indices:
@@ -113,15 +120,15 @@ class FishEyeLens(CameraLens):
             neighs = [
                 lens[n[0], n[1]] for n in neighs
                 if 0 <= n[0] < self._camera.width and 0 <= n[1] < self._camera.height
-                   and lens[n[0], n[1], 0] != -1
+                   and lens[n[0], n[1], 0] != INF
             ]
             assert len(neighs) > 0
             lensc[px[0], px[1]] = np.floor(np.mean(neighs, axis=0)).astype(int)
-        lens = np.ma.where(lens == -1, lensc, lens)
+        lens = np.ma.where(lens == INF, lensc, lens)
         # profiling
         print(f'Lens map filling completed in {int(time.time() - stime)} secs')
         # ---
-        return lens.astype(int)
+        return lens.astype(int), ph_camera
 
     def find_underlying_pinhole_camera(self):
         # find inner and outer contours
@@ -210,7 +217,7 @@ class FishEyeLens(CameraLens):
 def lens_map_generation_task(cur, tot, lens, camera, ph_camera):
     split = 1 / tot
     vs = range(int(cur * split * ph_camera.height), int((cur + 1) * split * ph_camera.height), 1)
-    lens_map = np.full((camera.width, camera.height, 2), -1)
+    lens_map = np.full((camera.width, camera.height, 2), INF)
     # shoot rays
     for u in range(ph_camera.width):
         for v in vs:

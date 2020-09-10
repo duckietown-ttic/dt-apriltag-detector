@@ -9,7 +9,7 @@ import yaml
 from apriltag_simulator.Camera import Camera
 from apriltag_simulator.Scene import Scene
 from apriltag_simulator.lenses import FishEyeLens
-from apriltag_simulator.objects import Rectangle3, TexturedRectangle3
+from apriltag_simulator.objects import TexturedRectangle3
 
 logging.basicConfig()
 logger = logging.getLogger('test_render')
@@ -55,18 +55,9 @@ scene.add(obj)
 # scene.add(grid)
 
 stime = time.time()
-img = camera.render(scene, bgcolor=125, progress=True)
+img = camera.render(scene, bgcolor=125)
 logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
 
 if DEBUG:
     imgplot = plt.imshow(img.transpose((1, 0, 2)))
     plt.show()
-
-
-# stime = time.time()
-# img = camera.render2(scene, bgcolor=125, progress=True)
-# logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
-#
-# if DEBUG:
-#     imgplot = plt.imshow(img.transpose((1, 0, 2)))
-#     plt.show()
