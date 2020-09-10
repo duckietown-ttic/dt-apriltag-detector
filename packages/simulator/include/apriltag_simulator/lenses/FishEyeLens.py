@@ -122,7 +122,6 @@ class FishEyeLens(CameraLens):
                 if 0 <= n[0] < self._camera.width and 0 <= n[1] < self._camera.height
                    and lens[n[0], n[1], 0] != INF
             ]
-            assert len(neighs) > 0
             lensc[px[0], px[1]] = np.floor(np.mean(neighs, axis=0)).astype(int)
         lens = np.ma.where(lens == INF, lensc, lens)
         # profiling

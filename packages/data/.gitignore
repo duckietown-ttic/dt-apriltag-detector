@@ -1,3 +1,6 @@
 simulated
 simulated_camera_models
-webcrawl_data
+webcrawl_data/*
+!webcrawl_data/html
+!webcrawl_data/raw
+!webcrawl_data/stats
