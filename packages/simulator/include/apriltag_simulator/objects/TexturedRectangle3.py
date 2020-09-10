@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from matplotlib.pyplot import imread
+from imageio import imread
 
 from .Rectangle3 import Rectangle3
 from .utils import isect_line_plane_v3
