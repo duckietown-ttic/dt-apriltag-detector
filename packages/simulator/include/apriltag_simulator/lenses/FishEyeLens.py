@@ -46,7 +46,7 @@ class FishEyeLens(CameraLens):
                 continue
             _m = np.linalg.norm([u - _u, v - _v])
             m = max(m, _m)
-        return m
+        return int(m)
 
     def transform(self, x: float, y: float) -> np.array:
         p = np.array([x, y])
@@ -58,9 +58,14 @@ class FishEyeLens(CameraLens):
         ]
         return np.add(radial, tangential)
 
-    def distort(self, u: int, v: int):
-        i = (u - self._camera.cx) / self._camera.fx
-        j = (v - self._camera.cy) / self._camera.fy
+    def distort(self, u: int, v: int, cx=None, cy=None, fx=None, fy=None):
+        cx = self._camera.cx if cx is None else cx
+        cy = self._camera.cy if cy is None else cy
+        fx = self._camera.fx if fx is None else fx
+        fy = self._camera.fy if fy is None else fy
+        # ---
+        i = (u - cx) / fx
+        j = (v - cy) / fy
         i, j = self.transform(i, j)
         _u = int(math.floor(i * self._camera.fx + self._camera.cx))
         _v = int(math.floor(j * self._camera.fy + self._camera.cy))
@@ -220,18 +225,16 @@ def lens_map_generation_task(cur, tot, lens, camera, ph_camera):
     # shoot rays
     for u in range(ph_camera.width):
         for v in vs:
-            i = (u - ph_camera.cx) / camera.fx
-            j = (v - ph_camera.cy) / camera.fy
-            i, j = lens.transform(i, j)
-
-            _u = int(math.floor(i * camera.fx + camera.cx))
-            _v = int(math.floor(j * camera.fy + camera.cy))
-
+            # find where u, v will appear in the distorted image of the physical camera
+            _u, _v = lens.distort(u, v, cx=ph_camera.cx, cy=ph_camera.cy)
+            if _u is None or _v is None:
+                # it is a miss
+                continue
+            # convert from the reference frame of the underlying camera to the physical camera's
             u1 = u - ph_camera.cx + camera.cx
             v1 = v - ph_camera.cy + camera.cy
-
-            if _u is not None and _v is not None:
-                if 0 <= _u < camera.width and 0 <= _v < camera.height:
-                    lens_map[_u, _v] = [u1, v1]
+            # ---
+            if 0 <= _u < camera.width and 0 <= _v < camera.height:
+                lens_map[_u, _v] = [u1, v1]
     # ---
     return lens_map
