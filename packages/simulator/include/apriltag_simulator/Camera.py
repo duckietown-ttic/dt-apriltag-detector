@@ -92,10 +92,10 @@ class Camera(object):
             args.append((i, num_threads, self, scene))
         # spin workers
         with Pool(num_threads) as pool:
-            res = pool.starmap(ray_casting_task, args)
+            res = pool.starmap(ray_casting_through_lens_task, args)
         # combine results
         for ma in res:
-            img = np.ma.where(ma == -1, img, ma)
+            img = np.ma.where(ma == INF, img, ma)
         # ---
         return img.astype(np.uint8)
 
@@ -110,25 +110,65 @@ class Camera(object):
         }
 
 
-def ray_casting_task(cur, tot, camera, scene):
+def ray_casting_through_lens_task(cur, tot, camera, scene):
     split = 1 / tot
     vs = range(int(cur * split * camera.height), int((cur + 1) * split * camera.height), 1)
-    img = np.full((camera.width, camera.height, 3), -1)
+    img = np.full((camera.width, camera.height, 3), INF)
     invM = transformations.inverse_matrix(camera.C)
     # shoot rays
     for _u in range(camera.width):
         for _v in vs:
+            # find the pixel's location on the underlying pinhole camera image
             u, v = camera.lens.to_pinhole_pixel(_u, _v)
             if u is None or v is None:
                 # we don't have a mapping between distorted pixel and underlying pinhole pixel
                 continue
+            # find the ray going through the pixel u, v
             ray = np.matmul(invM, [u, v, 1])
             z, c = None, None
+            # find the closest intersection (if any)
             for obj in scene:
                 inters_w, color = obj.intersect(ray)
                 if inters_w and (z is None or inters_w[2] < z):
                     z, c = inters_w[2], color
-            if c is not None:
-                img[_u, _v] = c
+            # check if it hit anything
+            if c is None:
+                # the ray is a miss
+                continue
+            # ---
+            img[_u, _v] = c
+    # ---
+    return img
+
+
+def ray_casting_through_underlying_pinhole_task(cur, tot, camera, scene):
+    split = 1 / tot
+    ph_camera = camera.lens.underlying_pinhole_camera
+    vs = range(int(cur * split * ph_camera.height), int((cur + 1) * split * ph_camera.height), 1)
+    img = np.full((camera.width, camera.height, 3), INF)
+    invM = transformations.inverse_matrix(ph_camera.C)
+    # shoot rays
+    for u in range(ph_camera.width):
+        for v in vs:
+            # find the ray going through the pixel u, v
+            ray = np.matmul(invM, [u, v, 1])
+            z, c = None, None
+            # find the closest intersection (if any)
+            for obj in scene:
+                inters_w, color = obj.intersect(ray)
+                if inters_w and (z is None or inters_w[2] < z):
+                    z, c = inters_w[2], color
+            # check if it hit anything
+            if c is None:
+                # the ray is a miss
+                continue
+            # compute where the u, v point will appear in the distorted image
+            _u, _v = camera.lens.distort(
+                u, v, ph_camera.cx, ph_camera.cy, ph_camera.fx, ph_camera.fy)
+            if _u is None or _v is None:
+                # we don't have a mapping between distorted pixel and underlying pinhole pixel
+                continue
+            # ray was a hit and the point is visible inside the distorted image
+            img[_u, _v] = c
     # ---
     return img
