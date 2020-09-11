@@ -13,7 +13,7 @@ class TexturedRectangle3(Rectangle3):
         self._texture_file = texture
         if not os.path.exists(self._texture_file) or not os.path.isfile(self._texture_file):
             raise ValueError('Could not load texture file "%s"' % self._texture_file)
-        self._texture = imread(self._texture_file)[:, :, 0:3].transpose((1, 0, 2))
+        self._texture = imread(self._texture_file)[:, :, 0:3].transpose((1, 0, 2)) * 255
 
     def points(self, steps_x=None, steps_y=None):
         if steps_x is None:
