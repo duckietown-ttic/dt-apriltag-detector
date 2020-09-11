@@ -70,9 +70,8 @@ tot_cameras = no_cameras
 print(f'{no_cameras} will be processed.')
 
 # create scene
-
-grid = TexturedRectangle3('grid', GRID_IMG, [3, 3], [0, 0, 0.8], [0, 0, 0])
 scene = Scene('scene1')
+grid = TexturedRectangle3('grid', GRID_IMG, [3, 3], [0, 0, 0.8], [0, 0, 0])
 scene.add(grid)
 
 os.makedirs(WEBCRAWL_STATS_DATA_DIR, exist_ok=True)
