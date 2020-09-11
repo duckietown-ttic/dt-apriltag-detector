@@ -42,7 +42,7 @@ camera = Camera.from_camera_info('camera1', camera_info)
 lens = FishEyeLens.from_camera_info('lens1', camera, camera_info)
 camera.attach_lens(lens)
 
-print(f'Lens[{lens.name}] Max Distortion: {lens.maximum_distortion()}px')
+print(f'Lens[{lens.name}] Max Distortion: {lens.maximum_distortion()} px')
 
 xyz = [0, 0, 0.07]
 rpy = [0, 0, 0]
