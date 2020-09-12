@@ -6,9 +6,7 @@ from multiprocessing.pool import Pool
 
 from .CameraLens import CameraLens
 from apriltag_simulator.Camera import Camera
-from apriltag_simulator.constants import NUM_THREADS
-
-INF = 9999999999
+from apriltag_simulator.constants import NUM_THREADS, INF
 
 
 class FishEyeLens(CameraLens):
@@ -34,14 +32,18 @@ class FishEyeLens(CameraLens):
     def underlying_pinhole_camera(self) -> Camera:
         return self._ph_camera
 
-    def to_pinhole_pixel(self, u: int, v: int) -> np.array:
+    @property
+    def map(self) -> np.ndarray:
+        return self._map
+
+    def rectify(self, u: int, v: int) -> np.array:
         _u, _v = self._map[u, v]
         return (_u, _v) if (_u != INF and _v != INF) else (None, None)
 
     def maximum_distortion(self):
         m = 0
         for u, v in product(range(self._camera.width), range(self._camera.height)):
-            _u, _v = self.to_pinhole_pixel(u, v)
+            _u, _v = self.rectify(u, v)
             if _u is None or _v is None:
                 continue
             _m = np.linalg.norm([u - _u, v - _v])

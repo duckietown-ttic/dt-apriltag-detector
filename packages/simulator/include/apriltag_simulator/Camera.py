@@ -1,10 +1,9 @@
 import numpy as np
 from multiprocessing.pool import Pool
 
-from apriltag_simulator.constants import NUM_THREADS
+from apriltag_simulator.constants import NUM_THREADS, INF
 from apriltag_simulator.utils import transformations
 
-INF = 9999999999
 np.set_printoptions(suppress=True)
 
 
@@ -92,7 +91,7 @@ class Camera(object):
             args.append((i, num_threads, self, scene))
         # spin workers
         with Pool(num_threads) as pool:
-            res = pool.starmap(ray_casting_through_lens_task, args)
+            res = pool.starmap(ray_casting_through_underlying_pinhole_task, args)
         # combine results
         for ma in res:
             img = np.ma.where(ma == INF, img, ma)
@@ -119,7 +118,7 @@ def ray_casting_through_lens_task(cur, tot, camera, scene):
     for _u in range(camera.width):
         for _v in vs:
             # find the pixel's location on the underlying pinhole camera image
-            u, v = camera.lens.to_pinhole_pixel(_u, _v)
+            u, v = camera.lens.rectify(_u, _v)
             if u is None or v is None:
                 # we don't have a mapping between distorted pixel and underlying pinhole pixel
                 continue
