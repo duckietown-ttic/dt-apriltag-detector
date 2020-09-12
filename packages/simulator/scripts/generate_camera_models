@@ -11,15 +11,12 @@ import matplotlib.pyplot as plt
 from apriltag_simulator.Camera import Camera
 from apriltag_simulator.Scene import Scene
 from apriltag_simulator.lenses import FishEyeLens
-from apriltag_simulator.objects import Rectangle3
+from apriltag_simulator.objects import TexturedRectangle3
 
 logging.basicConfig()
 logger = logging.getLogger('apriltag_simulator')
 logger.setLevel(logging.DEBUG)
 
-TAG_ID = 0
-LINE_LEN_M = 2.0
-RECT_Z = 0.2
 DEBUG = False
 
 DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', 'data')
@@ -34,57 +31,57 @@ fx, fy, cx, cy = width/2, width/2, width/2, height/2
 
 camera = Camera('camera1', fx, fy, cx, cy, width, height)
 
-# generate lenses
-K = [-0.4, -0.25, -0.1, 0, 0.1, 0.25, 0.4]
-P = [0] #[0, 0.002, 0.005]
-K1 = K
-K2 = K
-K3 = K
-P1 = P
-P2 = P
+grid = TexturedRectangle3('grid', GRID_IMG, [2, 2], [0, 0, 0.7], [0, 0, 0])
+scene = Scene('scene1')
+scene.add(grid)
+
+
+# define domains for Ks and Ps
+#
+#   Out of 700+ cameras fetched from the internet, the following values are the most commons ones:
+#
+#       K1 = [-0.056, 0.014, 0.038, -0.009, 0.061, -0.032, -0.242, -0.429, 0.154, 0.108]
+#            [   17%,    8%,    6%,     6%,    5%,     5%,     4%,     4%,    4%,    4%]
+#   chosen = [-0.4, -0.2, -0.1, -0.05, 0.0, 0.05, 0.1]
+#
+#       K2 = [-0.121, 0.048, 0.014,  0.115, -0.29,  -0.02, -0.087,  0.149, -0.189, -0.391]
+#            [   17%,    8%,    6%,     6%,    5%,     5%,     4%,     4%,     4%,     4%]
+#   chosen = [-0.4, -0.3, -0.2, -0.1, 0.0, 0.05, 0.1]
+#
+#
+K1 = [-0.4, -0.2, -0.1, -0.05, 0.0, 0.05, 0.1]
+K2 = [-0.4, -0.3, -0.2, -0.1, 0.0, 0.05, 0.1]
+P1 = [-0.01, 0, 0.01]
+P2 = [-0.01, 0, 0.01]
+K3 = [0]
+maxD = 200
 
 lenses = list(product(K1, K2, K3, P1, P2))
 
 print(f'Number of lenses: {len(lenses)}')
 
-lens_no = 0
+lens_no = -1
+good_lenses = 0
 for lens in lenses:
+    lens_no += 1
+    print()
     # k1, k2, k3, p1, p2 = -0.27, 0.055, 0.001, 0.0004, 0
     k1, k2, k3, p1, p2 = lens
 
-    lens_name = f'k_{np.round(k1, 2)}__{np.round(k2, 2)}__{np.round(k3, 2)}'
+    lens_name = f'k_{np.round(k1, 2)}__{np.round(k2, 2)}'
     out_dir = os.path.join(SIMULATED_LENSES_DIR, f'p1_{np.round(p1, 3)}__p2_{np.round(p2, 3)}')
     out_json = os.path.join(out_dir, f'{lens_name}.json')
+    out_broken = os.path.join(out_dir, f'{lens_name}.broken')
 
-    if os.path.isfile(out_json):
+    if os.path.isfile(out_json) or os.path.isfile(out_broken):
         continue
 
-    lens = FishEyeLens('lens1', k1, k2, k3, p1, p2)
-
+    camera.detach_lens()
+    lens = FishEyeLens(lens_name, camera, k1, k2, k3, p1, p2)
     camera.attach_lens(lens)
 
-    y_span = 0.4
-    y_step = 0.04
-    Y = list(np.arange(-y_span, y_span, y_step).tolist())
-
-    scene = Scene('scene1')
-    no_lines = len(Y) * 2
-    i = 0
-    for y in Y:
-        rpy = [0, 0, 0]
-        # horizontal
-        xyz = [0, y, RECT_Z]
-        obj = Rectangle3(f'grid{i}/{no_lines}', [LINE_LEN_M, 0.0004], 0, xyz, rpy)
-        scene.add(obj)
-        i += 1
-        # vertical
-        xyz = [y, 0, RECT_Z]
-        obj = Rectangle3(f'grid{i}/{no_lines}', [0.0004, LINE_LEN_M], 0, xyz, rpy)
-        scene.add(obj)
-        i += 1
-
     stime = time.time()
-    img, stats = camera.render(scene, bgcolor=255, progress=True, refine=False, return_stats=True)
+    img = camera.render(scene, bgcolor=255)
     logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
 
     if DEBUG:
@@ -92,10 +89,17 @@ for lens in lenses:
         plt.show()
     else:
         os.makedirs(out_dir, exist_ok=True)
-        min_dist = int(np.round(stats["min_distortion_px"], 0))
-        max_dist = int(np.round(stats["max_distortion_px"], 0))
-        dFoV = int(np.round(stats["diagonal_fov_deg"], 0))
-        out_png = os.path.join(out_dir, f'{lens_name}__dFoV{dFoV}__md{min_dist}__Md{max_dist}.png')
+        max_dist = lens.maximum_distortion()
+
+        if max_dist > maxD:
+            print(f'Lens has distortion of {max_dist}px (> {maxD}px), skipping.')
+            # ---
+            with open(out_broken, 'wt') as fout:
+                fout.write('BROKEN')
+            # ---
+            continue
+
+        out_png = os.path.join(out_dir, f'{lens_name}__Md{max_dist}.png')
         plt.imsave(out_png, img.transpose((1, 0, 2)))
         json.dump(
             {
@@ -114,9 +118,18 @@ for lens in lenses:
                         "data": [k1, k2, p1, p2, k3]
                     }
                 },
-                'stats': stats
+                'stats': {
+                    'max_distortion': max_dist
+                },
+                'lens': {
+                    'id': lens_no,
+                    'name': lens.name,
+                    'underlying_pinhole_camera': lens.underlying_pinhole_camera.to_json(),
+                    'map': lens.map.tolist()
+                }
             },
             open(out_json, 'wt'), indent=4, sort_keys=True
         )
 
-    lens_no += 1
+    good_lenses += 1
+    print(f'Good lenses so far: {good_lenses}/{lens_no}')

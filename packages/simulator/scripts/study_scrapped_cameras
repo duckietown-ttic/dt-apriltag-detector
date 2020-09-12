@@ -27,9 +27,10 @@ DIST_COEFF_K_RANGE = 0.8
 
 PRINT_MAXD_STATS = False
 PRINT_MAXD_RANGES = False
-PRINT_DIST_COEFFS_STATS = False
+PRINT_DIST_COEFFS_STATS = True
 PRINT_DIST_COEFFS_K_STATS = True
 PRINT_DIST_COEFFS_P_STATS = False
+PRINT_DIST_COEFFS_K1_K2_STATS = False
 
 CAMERAS = glob.glob(os.path.join(WEBCRAWL_STATS_DATA_DIR, f'camera_*.json'))
 
@@ -105,12 +106,36 @@ if PRINT_DIST_COEFFS_K_STATS:
             continue
         K1.append(k1)
         K2.append(k2)
+    # compute histogram
+    nbins = 40
+    print_first_n_bins = 10
+    for name, K in [('K1', K1), ('K2', K2)]:
+        counts, values = np.histogram(K, nbins)
+        idx = np.argsort(counts)[::-1]
+        print(f'\n{name}:: {print_first_n_bins} highest bins:')
+        cperc = 0
+        for i in range(print_first_n_bins):
+            count = counts[idx[i]]
+            value = np.round(values[idx[i]], 3)
+            perc = int(100 * np.round(count / len(K), 2))
+            cperc += perc
+            print(f'\t{i+1}:\t{value} \t\toccs: {count}, \t{perc}%, \tcuml: {cperc}%')
+
+if PRINT_DIST_COEFFS_K1_K2_STATS:
+    K1 = []
+    K2 = []
+    for camera_name in camera_stats.keys():
+        k1, k2, _, _, _ = get_distortion_coeffs(camera_name)
+        if abs(k1) > DIST_COEFF_K_RANGE or abs(k2) > DIST_COEFF_K_RANGE:
+            continue
+        K1.append(k1)
+        K2.append(k2)
     # plot k1 vs k2
     plt.scatter(K1, K2)
     plt.title('K1 vs. K2')
     plt.xlabel('K1')
     plt.ylabel('K2')
-    # plot k2 = f(k1)
+    # plot k2 as f(k1)
     K1 = np.linspace(-DIST_COEFF_K_RANGE, DIST_COEFF_K_RANGE, 200)
     K2 = K1 * 0.019 + 0.805 * (K1 ** 2)
     plt.plot(K1, K2)
