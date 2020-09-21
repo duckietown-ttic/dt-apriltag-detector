@@ -29,6 +29,26 @@ class FishEyeLens(CameraLens):
         self._map, self._ph_camera = self._create_map()
 
     @property
+    def k1(self):
+        return self._k1
+
+    @property
+    def k2(self):
+        return self._k2
+
+    @property
+    def p1(self):
+        return self._p1
+
+    @property
+    def p2(self):
+        return self._p2
+
+    @property
+    def k3(self):
+        return self._k3
+
+    @property
     def underlying_pinhole_camera(self) -> Camera:
         return self._ph_camera
 
@@ -127,7 +147,7 @@ class FishEyeLens(CameraLens):
             neighs = [
                 lens[n[0], n[1]] for n in neighs
                 if 0 <= n[0] < self._camera.width and 0 <= n[1] < self._camera.height
-                   and lens[n[0], n[1], 0] != INF
+                and lens[n[0], n[1], 0] != INF
             ]
             lensc[px[0], px[1]] = np.floor(np.mean(neighs, axis=0)).astype(int)
         lens = np.ma.where(lens == INF, lensc, lens)
