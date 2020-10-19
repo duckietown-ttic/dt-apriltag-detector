@@ -58,7 +58,7 @@ for camera_file in CAMERAS:
 
     camera_meta = json.load(open(camera_file, 'rt'))
     camera_info = camera_meta['camera_info']
-    camera_max_distortion_px = int(camera_meta['stats']['max_distortion_px'])
+    camera_max_distortion_px = int(camera_meta['stats']['max_distortion'])
     if camera_max_distortion_px > USE_CAMERA_WITH_MAX_DISTORTION_PX:
         print(f'Camera maximum distortion '
               f'is {camera_max_distortion_px} > {USE_CAMERA_WITH_MAX_DISTORTION_PX}')
@@ -68,7 +68,7 @@ for camera_file in CAMERAS:
 
     camera = Camera.from_camera_info('camera1', camera_info)
 
-    lens = FishEyeLens.from_camera_info('lens1', camera_info)
+    lens = FishEyeLens.from_camera_info('lens1', camera, camera_info)
 
     camera.attach_lens(lens)
 
@@ -82,7 +82,7 @@ for camera_file in CAMERAS:
     for z in Z:
         cur_data_dir = os.path.join(
             DATA_DIR,
-            'simulated',
+            'simulated_camera_images',
             camera_name,
             'z%dcm' % int(z * 100)
         )
@@ -134,7 +134,7 @@ for camera_file in CAMERAS:
                         scene.add(obj)
                         try:
                             stime = time.time()
-                            img = camera.render(scene, bgcolor=125, scream=True, progress=True)
+                            img = camera.render(scene, bgcolor=125)
                             logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
                             hits += 1
                             hits_since_y += 1
