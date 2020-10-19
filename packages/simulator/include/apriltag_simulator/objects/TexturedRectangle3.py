@@ -29,7 +29,8 @@ class TexturedRectangle3(Rectangle3):
 
     def intersect(self, ray3w):
         camera_center = [0, 0, 0]
-        intersection_w = isect_line_plane_v3(camera_center, ray3w, self._plane_center, self._plane_normal)
+        intersection_w = \
+            isect_line_plane_v3(camera_center, ray3w, self._plane_center, self._plane_normal)
         intersection = self.transform_from_world(intersection_w)
         if abs(intersection[0]) <= self._dimensions[0] * 0.5 and \
                 abs(intersection[1]) <= self._dimensions[1] * 0.5:

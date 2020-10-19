@@ -125,18 +125,22 @@ def ray_casting_through_lens_task(cur, tot, camera, scene):
     # shoot rays
     for _u in range(camera.width):
         for _v in vs:
-            # find the pixel's location on the underlying pinhole camera image
-            u, v = camera.lens.rectify(_u, _v)
-            if u is None or v is None:
-                # we don't have a mapping between distorted pixel and underlying pinhole pixel
-                continue
+            if camera.lens:
+                # find the pixel's location on the underlying pinhole camera image
+                u, v = camera.lens.rectify(_u, _v)
+                if u is None or v is None:
+                    # we don't have a mapping between distorted pixel and underlying pinhole pixel
+                    continue
+            else:
+                # this is a pinhole camera, no lens attached
+                u, v = _u, _v
             # find the ray going through the pixel u, v
             ray = np.matmul(invM, [u, v, 1])
             z, c = None, None
             # find the closest intersection (if any)
             for obj in scene:
                 inters_w, color = obj.intersect(ray)
-                if inters_w and (z is None or inters_w[2] < z):
+                if inters_w and inters_w[2] > 0 and (z is None or inters_w[2] < z):
                     z, c = inters_w[2], color
             # check if it hit anything
             if c is None:
@@ -195,7 +199,7 @@ def ray_casting_through_lens_task2(cur, tot, camera, scene):
             # find the closest intersection (if any)
             for obj in scene:
                 inters_w, color = obj.intersect(ray)
-                if inters_w and (z is None or inters_w[2] < z):
+                if inters_w and inters_w[2] > 0 and (z is None or inters_w[2] < z):
                     z, c = inters_w[2], color
             # check if it hit anything
             if c is None:
@@ -222,7 +226,7 @@ def ray_casting_through_underlying_pinhole_task(cur, tot, camera, scene):
             # find the closest intersection (if any)
             for obj in scene:
                 inters_w, color = obj.intersect(ray)
-                if inters_w and (z is None or inters_w[2] < z):
+                if inters_w and inters_w[2] > 0 and (z is None or inters_w[2] < z):
                     z, c = inters_w[2], color
             # check if it hit anything
             if c is None:
@@ -258,7 +262,7 @@ def ray_casting_through_underlying_pinhole_double_lens_task(cur, tot, camera, sc
             # find the closest intersection (if any)
             for obj in scene:
                 inters_w, color = obj.intersect(ray)
-                if inters_w and (z is None or inters_w[2] < z):
+                if inters_w and inters_w[2] > 0 and (z is None or inters_w[2] < z):
                     z, c = inters_w[2], color
             # check if it hit anything
             if c is None:
@@ -304,7 +308,7 @@ def ray_casting_through_underlying_pinhole_w_supersampling_task(cur, tot, camera
             # find the closest intersection (if any)
             for obj in scene:
                 inters_w, color = obj.intersect(ray)
-                if inters_w and (z is None or inters_w[2] < z):
+                if inters_w and inters_w[2] > 0 and (z is None or inters_w[2] < z):
                     z, c = inters_w[2], color
             # check if it hit anything
             if c is None:

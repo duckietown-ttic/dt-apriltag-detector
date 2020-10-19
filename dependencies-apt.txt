@@ -5,3 +5,6 @@ imagemagick
 ros-noetic-image-transport
 ros-noetic-image-transport-plugins
 ros-noetic-image-proc
+
+# needed by matplotlib
+python3-tk

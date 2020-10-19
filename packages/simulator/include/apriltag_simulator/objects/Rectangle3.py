@@ -14,7 +14,8 @@ class Rectangle3(Object3):
         self._color = color if isinstance(color, (list, tuple)) else (
             [color, color, color] if isinstance(color, int) else [255] * 3)
         self._plane_center = self.transform_to_world(self._get_point(0.5, 0.5, 0))
-        self._plane_normal = self.transform_to_world([0, 0, -1])
+        _plane_normal = self.transform_to_world([0, 0, -1]) - self._plane_center
+        self._plane_normal = _plane_normal / np.linalg.norm(_plane_normal)
 
     def shadow_polygon(self):
         poly = np.array([

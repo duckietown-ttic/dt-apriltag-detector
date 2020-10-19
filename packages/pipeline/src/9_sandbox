@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+import time
+import logging
+import matplotlib.pyplot as plt
+
+from apriltag_simulator.Camera import Camera
+from apriltag_simulator.Scene import Scene
+from apriltag_simulator.objects import TexturedRectangle3
+
+from constants import \
+    tag_size, tag_texture, \
+    pinhole_camera_info
+
+logging.basicConfig()
+logger = logging.getLogger('sandbox')
+logger.setLevel(logging.DEBUG)
+
+DEBUG = True
+
+camera = Camera.from_camera_info('camera1', pinhole_camera_info)
+
+tag_xyz = [1, 0, 1]
+tag_rpw = [0, 0, 0]
+grid = TexturedRectangle3('grid', tag_texture, [tag_size, tag_size], tag_xyz, tag_rpw)
+scene = Scene('scene1')
+scene.add(grid)
+
+stime = time.time()
+img = camera.render(scene, bgcolor=0)
+logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
+
+if DEBUG:
+    imgplot = plt.imshow(img.transpose((1, 0, 2)))
+    plt.show()

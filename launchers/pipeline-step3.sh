@@ -9,11 +9,11 @@ dt-launchfile-init
 # ----------------------------------------------------------------------------
 
 
-# NOTE: Use the variable CODE_DIR to know the absolute path to your code
+# NOTE: Use the variable DT_REPO_PATH to know the absolute path to your code
 # NOTE: Use `dt-exec COMMAND` to run the main process (blocking process)
 
 # launching app
-dt-exec echo "Nothing to do here!"
+dt-exec python3 ${DT_REPO_PATH}/packages/pipeline/src/3_study_scrapped_cameras
 
 
 # ----------------------------------------------------------------------------
