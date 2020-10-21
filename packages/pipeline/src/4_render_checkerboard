@@ -8,25 +8,25 @@ import matplotlib.pyplot as plt
 
 from apriltag_simulator.Camera import Camera
 from apriltag_simulator.Scene import Scene
-from apriltag_simulator.objects import TexturedRectangle3
+from apriltag_simulator.objects import TexturedPlane3
 
 from constants import \
     DATA_DIR, \
-    grid_w, grid_h, grid_xyz, grid_rpw, grid_texture, \
+    grid_xyz, grid_rpw, grid_texture, \
     pinhole_camera_info
 
 logging.basicConfig()
 logger = logging.getLogger('render_checkerboard')
 logger.setLevel(logging.DEBUG)
 
-DEBUG = True
+DEBUG = False
 
 SIM_DATA_DIR = os.path.join(DATA_DIR, 'simulator')
 bground_out_png = os.path.join(SIM_DATA_DIR, 'background.png')
 
 camera = Camera.from_camera_info('camera1', pinhole_camera_info)
 
-grid = TexturedRectangle3('grid', grid_texture, [grid_w, grid_h], grid_xyz, grid_rpw)
+grid = TexturedPlane3('grid', grid_texture, grid_xyz, grid_rpw)
 scene = Scene('scene1')
 scene.add(grid)
 
@@ -35,8 +35,9 @@ img = camera.render(scene, bgcolor=0)
 logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
 
 if DEBUG:
+    # show the image
     imgplot = plt.imshow(img.transpose((1, 0, 2)))
     plt.show()
-
-# save background to disk
-imageio.imsave(bground_out_png, img.transpose((1, 0, 2)))
+else:
+    # save background to disk
+    imageio.imsave(bground_out_png, img.transpose((1, 0, 2)))

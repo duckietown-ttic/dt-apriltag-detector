@@ -17,20 +17,16 @@ from dt_apriltags import Detector
 from constants import \
     grid_filepath, \
     tag_size, tag_texture, \
-    X, Y, Z, \
-    generate_camera_info
+    pinhole_camera_info
 
 logging.basicConfig()
-logger = logging.getLogger('sandbox')
+logger = logging.getLogger('find_z_domain')
 logger.setLevel(logging.DEBUG)
 
-DEBUG = True
-formatted = lambda f: ('%.2f' % f).rstrip('0').rstrip('.')
+DEBUG = False
 empty_pixel = 125
-scale = 0.1
 
 # create camera
-pinhole_camera_info = generate_camera_info(scale)
 camera = Camera.from_camera_info('camera1', pinhole_camera_info)
 
 # create scene
@@ -44,6 +40,9 @@ scene.add(tag)
 bground = cv2.imread(grid_filepath)
 bground = cv2.resize(bground, dsize=(camera.width, camera.height), interpolation=cv2.INTER_CUBIC)
 bground = bground.transpose((1, 0, 2))
+
+# create apriltag detector
+detector = Detector(quad_decimate=1.0, nthreads=4)
 
 # provide a clean way of stopping
 _sigint_handler = lambda *_: sys.exit(0)
@@ -67,45 +66,52 @@ def render(_x, _y, _z, _r, _p, _w):
     img = np.ma.where(img == empty_pixel, bground, img)
     logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
     # ---
+    if DEBUG:
+        # show image
+        plt.imshow(img.transpose((1, 0, 2)))
+        plt.show()
     return img
 
 
-img = render(0, 0, 10, 0, 0, 0)
+z_step = 2
+z = 1.5
+detected = 0
+missed = 0
+total = 0
+Z = set()
 
-# create apriltag detector
-detector = Detector()
+while True:
+    if missed >= 3:
+        break
+    print('Testing z = %.1f' % z)
+    img = render(0, 0, z, 0, 0, 0)
+    # turn img into grayscale
+    img = img[:, :, 0].T
+    # run detection
+    stime = time.time()
+    detection = detector.detect(img)
+    ftime = time.time() - stime
+    print('Processed in %.5f secs' % ftime)
+    # check if detected
+    if detection:
+        # check if the initial value of z is too high
+        if total == 0:
+            print('WARNING: Your first image was a HIT, lower the initial value of Z')
+            time.sleep(4)
+        print('HIT')
+        if detected == 0:
+            print('min Z: %.1f' % z)
+            Z.add(z)
+        detected += 1
+    else:
+        print('MISS')
+        if detected > 0:
+            missed += 1
+    z += z_step
+    total += 1
+    print()
+print('max Z: %.1f' % z)
+Z.add(z)
 
-
-for _z in range(1, 13, 2):
-    _x = list(X(_z))[-1]
-    _y = list(Y(_z))[-1]
-    img = render(_x, _y, _z, 0, 0, 0)
-    plt.imshow(img.transpose((1, 0, 2)))
-    plt.show()
-
-# for _s in range(1, 20, 2):
-#     x = list(X(_s, scale))[-1]
-#     y = list(Y(_s, scale))[-1]
-#     img = render(x, y, _s, 0, 0, 0)
-#     plt.imshow(img.transpose((1, 0, 2)))
-#     plt.show()
-#
-# if DEBUG:
-#     # show image
-#     plt.imshow(img.transpose((1, 0, 2)))
-#     plt.show()
-
-# turn img into grayscale
-img = img[:, :, 0].T
-
-stime = time.time()
-detection = detector.detect(img)
-ftime = time.time() - stime
-print('Processed in %.5f secs' % ftime)
-
-print(detection)
-
-for i in range(10):
-    # print(list(X(i, scale)))
-    print(list(Y(i)))
+print('Z domain: %s' % str(list(sorted(Z))))
 

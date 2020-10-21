@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+import glob
+import os
+import sys
+
+import cv2
+import logging
+from signal import signal, SIGINT
+
+from apriltag_simulator.Camera import Camera
+
+from constants import \
+    DATA_DIR, \
+    grid_filepath, \
+    k1, k2, p1, p2, k3, \
+    pinhole_camera_info
+
+logging.basicConfig()
+logger = logging.getLogger('render_distorted_images')
+logger.setLevel(logging.DEBUG)
+
+
+DEBUG = False
+PRODUCE_IMAGES = True
+APPLY_BACKGROUND = False
+formatted = lambda f: ('%.2f' % f).rstrip('0').rstrip('.')
+empty_pixel = 125
+
+# create camera
+camera = Camera.from_camera_info('camera1', pinhole_camera_info)
+
+# create file mappings
+IN_RENDERING_DATA_DIR = os.path.join(
+    DATA_DIR, 'renderings', 'undistorted', f'{camera.width}x{camera.height}')
+OUT_RENDERING_DATA_DIR = os.path.join(
+    DATA_DIR, 'renderings', 'distorted', f'{camera.width}x{camera.height}',
+    'plain' if not APPLY_BACKGROUND else 'grid')
+OUT_FILEPATH = lambda _k1, _k2, _p1, _p2, _, _in_filepath: \
+    os.path.join(
+        OUT_RENDERING_DATA_DIR,
+        f'K_{formatted(_k1)}__{formatted(_k2)}__P_{formatted(_p1)}__{formatted(_p2)}',
+        f'{os.path.relpath(_in_filepath, IN_RENDERING_DATA_DIR)}'
+    )
+
+# load background
+bground = cv2.imread(grid_filepath)
+bground = cv2.resize(bground, dsize=(camera.width, camera.height), interpolation=cv2.INTER_CUBIC)
+bground = bground.transpose((1, 0, 2))
+
+# provide a clean way of stopping
+_sigint_handler = lambda *_: sys.exit(0)
+signal(SIGINT, _sigint_handler)
+
+# load all images
+images = glob.glob(f'{IN_RENDERING_DATA_DIR}/**/*.png', recursive=True)
+logger.info('Found %d images' % len(images))
+
+# produce lenses
+lenses = []
+for _k1 in k1:
+    for _k2 in k2(_k1):
+        for _k3 in k3:
+            for _p1 in p1:
+                for _p2 in p2:
+                    lenses.append((_k1, _k2, _p1, _p2, _k3))
+logger.info('Generated %d lenses' % len(lenses))
+
+logger.info('Expected %d new images to be produced' % (len(lenses) * len(images)))

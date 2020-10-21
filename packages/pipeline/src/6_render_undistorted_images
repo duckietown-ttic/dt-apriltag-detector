@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import cv2
 import time
 import logging
+import imageio
 import numpy as np
 import matplotlib.pyplot as plt
 from signal import signal, SIGINT
@@ -12,26 +14,37 @@ from apriltag_simulator.Camera import Camera
 from apriltag_simulator.Scene import Scene
 from apriltag_simulator.objects import TexturedRectangle3
 
-from dt_apriltags import Detector
-
 from constants import \
+    DATA_DIR, \
     grid_filepath, \
     tag_size, tag_texture, \
+    roll, pitch, yaw, \
     X, Y, Z, \
-    generate_camera_info
+    pinhole_camera_info
 
 logging.basicConfig()
-logger = logging.getLogger('sandbox')
+logger = logging.getLogger('render_undistorted_images')
 logger.setLevel(logging.DEBUG)
 
-DEBUG = True
+
+DEBUG = False
+PRODUCE_IMAGES = True
+APPLY_BACKGROUND = False
 formatted = lambda f: ('%.2f' % f).rstrip('0').rstrip('.')
 empty_pixel = 125
-scale = 0.1
 
 # create camera
-pinhole_camera_info = generate_camera_info(scale)
 camera = Camera.from_camera_info('camera1', pinhole_camera_info)
+
+# create file mappings
+RENDERING_DATA_DIR = os.path.join(
+    DATA_DIR, 'renderings', 'undistorted', f'{camera.width}x{camera.height}')
+OUT_FILEPATH = lambda _x, _y, _z, _r, _p, _w: \
+    os.path.join(
+        RENDERING_DATA_DIR,
+        f'z_{formatted(_z)}', f'x_{formatted(_x)}', f'y_{formatted(_y)}',
+        f'r_{formatted(_r)}', f'p_{formatted(_p)}', f'w_{formatted(_w)}.png'
+    )
 
 # create scene
 scene = Scene('scene1')
@@ -56,6 +69,13 @@ def render(_x, _y, _z, _r, _p, _w):
                  '\n\t- resolution  [%d, %d]' % (camera.width, camera.height) +
                  '\n\t- position    [%.2f, %.2f, %.2f]' % (_x, _y, _z) +
                  '\n\t- orientation [%.2f, %.2f, %.2f]' % (_r, _p, _w))
+    # compile file name
+    filepath = OUT_FILEPATH(_x, _y, _z, _r, _p, _w)
+    # check if the file exists
+    if os.path.isfile(filepath):
+        logger.debug('File already exists. Skipping.')
+        return
+    # ---
     tag_xyz = [_x, _y, _z]
     tag_rpw = [np.deg2rad(_r), np.deg2rad(_p), np.deg2rad(_w)]
     # move the tag to the current position
@@ -64,48 +84,32 @@ def render(_x, _y, _z, _r, _p, _w):
     # render
     stime = time.time()
     img = camera.render(scene, bgcolor=empty_pixel)
-    img = np.ma.where(img == empty_pixel, bground, img)
+    if APPLY_BACKGROUND:
+        img = np.ma.where(img == empty_pixel, bground, img)
     logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
     # ---
-    return img
+    if DEBUG:
+        # show image
+        plt.imshow(img.transpose((1, 0, 2)))
+        plt.show()
+    # ---
+    if PRODUCE_IMAGES:
+        logger.info('Saving image to disk...')
+        # compile file name
+        filedir = os.path.dirname(filepath)
+        os.makedirs(filedir, exist_ok=True)
+        # save rendering to disk
+        imageio.imsave(filepath, img.transpose((1, 0, 2)))
+        logger.info('Done!')
+    # ---
+    print()
 
 
-img = render(0, 0, 10, 0, 0, 0)
-
-# create apriltag detector
-detector = Detector()
-
-
-for _z in range(1, 13, 2):
-    _x = list(X(_z))[-1]
-    _y = list(Y(_z))[-1]
-    img = render(_x, _y, _z, 0, 0, 0)
-    plt.imshow(img.transpose((1, 0, 2)))
-    plt.show()
-
-# for _s in range(1, 20, 2):
-#     x = list(X(_s, scale))[-1]
-#     y = list(Y(_s, scale))[-1]
-#     img = render(x, y, _s, 0, 0, 0)
-#     plt.imshow(img.transpose((1, 0, 2)))
-#     plt.show()
-#
-# if DEBUG:
-#     # show image
-#     plt.imshow(img.transpose((1, 0, 2)))
-#     plt.show()
-
-# turn img into grayscale
-img = img[:, :, 0].T
-
-stime = time.time()
-detection = detector.detect(img)
-ftime = time.time() - stime
-print('Processed in %.5f secs' % ftime)
-
-print(detection)
-
-for i in range(10):
-    # print(list(X(i, scale)))
-    print(list(Y(i)))
-
+# render all images
+for z in Z:
+    for x in X(z):
+        for y in Y(z):
+            for r in roll:
+                for p in pitch:
+                    for w in yaw:
+                        render(x, y, z, r, p, w)

@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+import itertools
+import os
+import pickle
+import sys
+import cv2
+import time
+import logging
+import numpy as np
+import matplotlib.pyplot as plt
+from signal import signal, SIGINT
+
+from apriltag_simulator.Camera import Camera
+from apriltag_simulator.Scene import Scene
+from apriltag_simulator.lenses import FishEyeLens
+from apriltag_simulator.objects import TexturedRectangle3
+from apriltag_simulator.utils import CountingProgressBar
+
+from constants import \
+    DATA_DIR, \
+    grid_filepath, \
+    k1, k2, p1, p2, k3, \
+    tag_size, tag_texture, \
+    pinhole_camera_info
+
+logging.basicConfig()
+logger = logging.getLogger('generate_lenses')
+logger.setLevel(logging.DEBUG)
+
+
+DEBUG = True
+PRODUCE_LENSES = False
+formatted = lambda f: ('%.2f' % f).rstrip('0').rstrip('.')
+empty_pixel = 125
+
+LENS_DATA_DIR = os.path.join(DATA_DIR, 'lenses')
+OUT_FILEPATH = lambda _k1, _k2, _p1, _p2, *_: \
+    os.path.join(
+        LENS_DATA_DIR,
+        f'K_{formatted(_k1)}__{formatted(_k2)}__P_{formatted(_p1)}__{formatted(_p2)}.pickle'
+    )
+
+# create camera
+camera = Camera.from_camera_info('camera1', pinhole_camera_info)
+
+# DEBUG only
+if DEBUG:
+    logger.debug('Rendering sample scene...')
+    # create scene
+    scene = Scene('scene1')
+    # create objects
+    tag = TexturedRectangle3('tag1', tag_texture, [tag_size, tag_size], [0, 0, 3])
+    scene.add(tag)
+    # load background
+    bground = cv2.imread(grid_filepath)
+    bground = cv2.resize(
+        bground, dsize=(camera.width, camera.height), interpolation=cv2.INTER_CUBIC)
+    bground = bground.transpose((1, 0, 2))
+    # render
+    stime = time.time()
+    img = camera.render(scene, bgcolor=empty_pixel)
+    img = np.ma.where(img == empty_pixel, bground, img)
+    logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
+
+# provide a clean way of stopping
+_sigint_handler = lambda *_: sys.exit(0)
+signal(SIGINT, _sigint_handler)
+
+
+# define rendering function
+def generate_lens(_k1, _k2, _p1, _p2, _k3):
+    logger.debug('Generating Lens:'
+                 '\n\t- radial (K)      [%.2f, %.2f, %.2f]' % (_k1, _k2, _k3) +
+                 '\n\t- tangential (P)  [%.2f, %.2f]' % (_p1, _p2))
+    # compile file name
+    filepath = OUT_FILEPATH(_k1, _k2, _p1, _p2, _k3)
+    # check if the file exists
+    if os.path.isfile(filepath):
+        logger.debug('Lens already exists. Skipping.')
+        return
+    # ---
+    # create lens
+    stime = time.time()
+    lens = FishEyeLens('lens1', camera, _k1, _k2, _k3, _p1, _p2, generate_inverse_map=False)
+    logger.debug('Generated in {} secs'.format(int(time.time() - stime)))
+    # ---
+    if DEBUG:
+        logger.info('Distorting sample image...')
+        stime = time.time()
+        # distort image
+        dimg = np.zeros_like(img)
+        pbar = CountingProgressBar(camera.width * camera.height)
+        for u, v in itertools.product(range(camera.width), range(camera.height)):
+            du, dv = lens.distort(u, v)
+            if du is not None and dv is not None:
+                dimg[du, dv] = img[u, v]
+            pbar.tick()
+        logger.info(f'Distorted in {int(time.time() - stime)} secs.')
+        # show image
+        plt.imshow(dimg.transpose((1, 0, 2)))
+        plt.show()
+    # serialize the lens object
+    if PRODUCE_LENSES:
+        logger.info('Serializing lens to file... ')
+        stime = time.time()
+        with open(filepath, 'wb') as fout:
+            pickle.dump(lens, fout)
+        logger.info(f'Serialized in {int(time.time() - stime)} secs.')
+    # ---
+    print()
+
+
+# render all images
+for _k1 in k1:
+    for _k2 in k2(_k1):
+        for _k3 in k3:
+            for _p1 in p1:
+                for _p2 in p2:
+                    generate_lens(_k1, _k2, _p1, _p2, _k3)
