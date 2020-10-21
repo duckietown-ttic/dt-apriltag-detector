@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+
+import os
+from collections import defaultdict
+
+import yaml
+import json
+import time
+import random
+import requests
+from bs4 import BeautifulSoup
+
+from apriltag_simulator.utils import ProgressBar
+
+from constants import DATA_DIR
+
+GITHUB_SEARCH_FILE_TYPE = "YAML"
+GITHUB_SEARCH_KEYWORD = "plumb_bob"
+GITHUB_SEARCH_SCOPE = "Code"
+GITHUB_SEARCH_URL = \
+    f"https://github.com/search?l={GITHUB_SEARCH_FILE_TYPE}&p=%d&q={GITHUB_SEARCH_KEYWORD}" \
+    f"&type={GITHUB_SEARCH_SCOPE}"
+GITHUB_RAW_CONTENT_URL = lambda _user, _repo, _sha, _path: \
+    f"https://raw.githubusercontent.com/{_user}/{_repo}/{_sha}/{_path}"
+GITHUB_PAGES = 100
+
+WEBCRAWL_DATA_DIR = os.path.join(DATA_DIR, 'webcrawl_data')
+WEBCRAWL_RAW_DATA_DIR = os.path.join(WEBCRAWL_DATA_DIR, 'raw')
+WEBCRAWL_HTML_DATA_DIR = os.path.join(WEBCRAWL_DATA_DIR, 'html')
+
+STATIC_GITHUB_USER_SESSION = 'nSiQqSDKS1WBO6isxRAg98BDXnw9lX_fZceE174OLsznkVQN'
+
+
+def get_page(_page_no: int, _user_session: str):
+    url = GITHUB_SEARCH_URL % _page_no
+    cookie = f'user_session={_user_session}'
+    return requests.get(url, headers={'Cookie': cookie}).text
+
+
+user_session = STATIC_GITHUB_USER_SESSION
+if not STATIC_GITHUB_USER_SESSION:
+    user_session = input(
+        "Open your browser, login on github.com, then paste the 'user_session' cookie here: ")
+
+os.makedirs(WEBCRAWL_HTML_DATA_DIR, exist_ok=True)
+os.makedirs(WEBCRAWL_RAW_DATA_DIR, exist_ok=True)
+
+stats = {
+    'results_per_page': defaultdict(lambda: 0),
+    'valid_per_page': defaultdict(lambda: 0),
+    'miss_reason': {
+        'invalid_yaml': 0,
+        'missing_keys': 0,
+        'wrong_model': 0,
+        'bad_values': 0,
+    }
+}
+
+camera_no = 1
+pbar = ProgressBar()
+for page_no in range(1, GITHUB_PAGES+1, 1):
+    local_html = os.path.join(WEBCRAWL_HTML_DATA_DIR, f'page_{str(page_no).zfill(3)}.html')
+
+    if os.path.exists(local_html):
+        continue
+
+    html_doc = get_page(page_no, user_session)
+    soup = BeautifulSoup(html_doc, 'html.parser')
+
+    if 'You have triggered an abuse detection mechanism' in html_doc:
+        print('Abuse detected by GitHub, stopping for now.')
+        exit(1)
+
+    with open(local_html, 'w') as fout:
+        fout.write(html_doc)
+
+    for k, result in enumerate(soup.select('.code-list-item')):
+        href = result.select('.f4 a')[0]['href']
+        _, user, repo, _, sha, path = href.split('/', 5)
+        raw_url = GITHUB_RAW_CONTENT_URL(user, repo, sha, path)
+        raw = requests.get(raw_url).text
+        local_yaml = os.path.join(WEBCRAWL_RAW_DATA_DIR, f'camera_{str(camera_no).zfill(4)}.yaml')
+
+
+        pbar.update(100 * (page_no / GITHUB_PAGES) + int(100 * (k / 10) * (1 / GITHUB_PAGES)))
+        stats['results_per_page'][page_no] += 1
+        # try parsing as YAML
+        try:
+            data = yaml.load(raw, Loader=yaml.SafeLoader)
+        except BaseException:
+            stats['miss_reason']['invalid_yaml'] += 1
+            continue
+        # the YAML file has to have:
+        #   - /distortion_model:               type[str], value[plumb_bob]
+        #   - /distortion_coefficients/data:   type[list], length[5]
+        if 'distortion_model' not in data or 'distortion_coefficients' not in data:
+            stats['miss_reason']['missing_keys'] += 1
+            continue
+        if data['distortion_model'] != 'plumb_bob':
+            stats['miss_reason']['wrong_model'] += 1
+            continue
+        if 'data' not in data['distortion_coefficients'] or \
+                not isinstance(data['distortion_coefficients']['data'], list):
+            stats['miss_reason']['bad_values'] += 1
+            continue
+
+        stats['valid_per_page'][page_no] += 1
+        # ---
+        with open(local_yaml, 'w') as fout:
+            yaml.dump(data, fout)
+        # ---
+        camera_no += 1
+
+    time.sleep(random.randint(2, 8))
+
+    pbar.update(100 * page_no / GITHUB_PAGES)
+pbar.update(100)
+
+
+print(json.dumps(stats, sort_keys=True, indent=4))

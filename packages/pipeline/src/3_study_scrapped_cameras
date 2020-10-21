@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+
+import os
+import json
+import yaml
+import glob
+import logging
+import numpy as np
+from pathlib import Path
+import matplotlib.pyplot as plt
+
+from constants import DATA_DIR
+
+logging.basicConfig()
+logger = logging.getLogger('study_scrapped_cameras')
+logger.setLevel(logging.DEBUG)
+
+WEBCRAWL_DATA_DIR = os.path.join(DATA_DIR, 'webcrawl_data')
+WEBCRAWL_RAW_DATA_DIR = os.path.join(WEBCRAWL_DATA_DIR, 'raw')
+WEBCRAWL_STATS_DATA_DIR = os.path.join(WEBCRAWL_DATA_DIR, 'stats')
+DEBUG = False
+
+MAXD_RANGE = 1000
+DIST_COEFF_P_RANGE = 0.05
+DIST_COEFF_K_RANGE = 0.8
+
+PRINT_MAXD_STATS = True
+PRINT_MAXD_RANGES = True
+PRINT_DIST_COEFFS_STATS = True
+PRINT_DIST_COEFFS_K_STATS = True
+PRINT_DIST_COEFFS_P_STATS = True
+PRINT_DIST_COEFFS_K1_K2_STATS = True
+
+CAMERAS = glob.glob(os.path.join(WEBCRAWL_STATS_DATA_DIR, f'camera_*.json'))
+
+
+tot_cameras = no_cameras = len(CAMERAS)
+valid_cameras = {}
+camera_stats = {}
+
+# load cameras stats
+for camera_file in CAMERAS:
+    camera_name = Path(camera_file).stem
+    with open(camera_file, 'r') as fin:
+        camera_stats[camera_name] = json.load(fin)
+print(f'{len(CAMERAS)} cameras loaded.')
+
+# filter cameras (invalid disto coeffs)
+camera_stats = {
+    k: c for k, c in camera_stats.items()
+    if c['max_distortion'] < MAXD_RANGE
+}
+no_cameras = len(camera_stats)
+print(f'{tot_cameras - no_cameras} cameras had a max distortion out of range [> {MAXD_RANGE-1}]')
+tot_cameras = no_cameras
+
+
+def get_distortion_coeffs(camera_name: str):
+    local_yaml = os.path.join(WEBCRAWL_RAW_DATA_DIR, f'{camera_name}.yaml')
+    with open(local_yaml, 'r') as fin:
+        return yaml.full_load(fin)['distortion_coefficients']['data']
+
+
+if PRINT_MAXD_RANGES:
+    maxD = np.array([c['max_distortion'] for c in camera_stats.values()])
+    print(f'max maxD: {maxD.max()}')
+    print(f'min maxD: {maxD.min()}')
+    print(f'mean maxD: {maxD.mean()}')
+    print(f'std maxD: {maxD.std()}')
+    plt.hist(maxD, bins=100)
+    plt.show()
+
+if PRINT_MAXD_RANGES:
+    bins = range(0, 251, 50)
+    for s, e in zip(bins, bins[1:]):
+        print(f'\nBin: [{s}, {e})')
+        for name, stats in camera_stats.items():
+            if s <= stats['max_distortion'] < e:
+                print(name)
+
+if PRINT_DIST_COEFFS_STATS:
+    K1, K2, P1, P2, K3 = [], [], [], [], []
+    for camera_name in camera_stats.keys():
+        k1, k2, p1, p2, k3 = get_distortion_coeffs(camera_name)
+        K1.append(k1)
+        K2.append(k2)
+        if abs(p1) <= DIST_COEFF_P_RANGE and abs(p2) <= DIST_COEFF_P_RANGE:
+            P1.append(p1)
+            P2.append(p2)
+        K3.append(k3)
+    # ---
+    values = [K1, K2, P1, P2, K3]
+    names = ['k1', 'k2', 'p1', 'p2', 'k3']
+    for i in range(5):
+        plt.hist(values[i], bins=50)
+        plt.title(names[i])
+        plt.show()
+
+if PRINT_DIST_COEFFS_K_STATS:
+    K1 = []
+    K2 = []
+    for camera_name in camera_stats.keys():
+        k1, k2, _, _, _ = get_distortion_coeffs(camera_name)
+        if abs(k1) > DIST_COEFF_K_RANGE or abs(k2) > DIST_COEFF_K_RANGE:
+            continue
+        K1.append(k1)
+        K2.append(k2)
+    # compute histogram
+    nbins = 40
+    print_first_n_bins = 10
+    for name, K in [('K1', K1), ('K2', K2)]:
+        counts, values = np.histogram(K, nbins)
+        idx = np.argsort(counts)[::-1]
+        print(f'\n{name}:: {print_first_n_bins} highest bins:')
+        cperc = 0
+        for i in range(print_first_n_bins):
+            count = counts[idx[i]]
+            value = np.round(values[idx[i]], 3)
+            perc = int(100 * np.round(count / len(K), 2))
+            cperc += perc
+            print(f'\t{i+1}:\t{value} \t\toccs: {count}, \t{perc}%, \tcuml: {cperc}%')
+
+if PRINT_DIST_COEFFS_K1_K2_STATS:
+    K1 = []
+    K2 = []
+    for camera_name in camera_stats.keys():
+        k1, k2, _, _, _ = get_distortion_coeffs(camera_name)
+        if abs(k1) > DIST_COEFF_K_RANGE or abs(k2) > DIST_COEFF_K_RANGE:
+            continue
+        K1.append(k1)
+        K2.append(k2)
+    # plot k1 vs k2
+    plt.scatter(K1, K2)
+    plt.title('K1 vs. K2')
+    plt.xlabel('K1')
+    plt.ylabel('K2')
+    # plot k2 as f(k1)
+    K1 = np.linspace(-DIST_COEFF_K_RANGE, DIST_COEFF_K_RANGE, 200)
+    K2 = K1 * 0.019 + 0.805 * (K1 ** 2)
+    plt.plot(K1, K2)
+    # ---
+    plt.grid()
+    plt.show()
+
+if PRINT_DIST_COEFFS_P_STATS:
+    P1 = []
+    P2 = []
+    for camera_name in camera_stats.keys():
+        _, _, p1, p2, _ = get_distortion_coeffs(camera_name)
+        if abs(p1) > DIST_COEFF_P_RANGE or abs(p2) > DIST_COEFF_P_RANGE:
+            continue
+        P1.append(p1)
+        P2.append(p2)
+    # plot p1 vs p2
+    plt.scatter(P1, P2)
+    plt.title('P1 vs. P2')
+    plt.xlabel('P1')
+    plt.ylabel('P2')
+    plt.xlim(left=-DIST_COEFF_P_RANGE, right=DIST_COEFF_P_RANGE)
+    plt.ylim(bottom=-DIST_COEFF_P_RANGE, top=DIST_COEFF_P_RANGE)
+    plt.xticks(np.arange(-DIST_COEFF_P_RANGE, DIST_COEFF_P_RANGE, 0.01))
+    plt.yticks(np.arange(-DIST_COEFF_P_RANGE, DIST_COEFF_P_RANGE, 0.01))
+    plt.grid()
+    plt.show()
