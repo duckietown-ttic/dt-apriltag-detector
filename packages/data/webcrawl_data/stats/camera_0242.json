@@ -1,0 +1,19 @@
+{
+    "camera": {
+        "cx": 339.8325,
+        "cy": 222.0175,
+        "fx": 588.32,
+        "fy": 587.305,
+        "height": 480,
+        "width": 640
+    },
+    "max_distortion": 89,
+    "underlying_pinhole_camera": {
+        "cx": 442.31323828125,
+        "cy": 288.62275,
+        "fx": 588.32,
+        "fy": 587.305,
+        "height": 624,
+        "width": 833
+    }
+}
