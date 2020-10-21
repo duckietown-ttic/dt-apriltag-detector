@@ -17,7 +17,8 @@ class FishEyeLens(CameraLens):
         return FishEyeLens(name, camera, K1, K2, K3, P1, P2)
 
     def __init__(self, name: str, camera: Camera,
-                 k1: float = 0, k2: float = 0, k3: float = 0, p1: float = 0, p2: float = 0):
+                 k1: float = 0, k2: float = 0, k3: float = 0, p1: float = 0, p2: float = 0,
+                 generate_inverse_map: bool = True):
         CameraLens.__init__(self, name)
         self._name = name
         self._k1 = k1
@@ -26,7 +27,10 @@ class FishEyeLens(CameraLens):
         self._p1 = p1
         self._p2 = p2
         self._camera = camera
-        self._map, self._ph_camera = self._create_map()
+        self._map = None
+        self._ph_camera = None
+        if generate_inverse_map:
+            self._map, self._ph_camera = self._create_map()
 
     @property
     def k1(self):

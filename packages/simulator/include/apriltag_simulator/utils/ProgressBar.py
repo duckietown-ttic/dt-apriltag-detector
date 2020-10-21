@@ -42,3 +42,19 @@ class ProgressBar:
 
     def done(self):
         self.update(100)
+
+
+class CountingProgressBar(ProgressBar):
+
+    def __init__(self, total, scale=1.0, buf=sys.stdout, header='Progress'):
+        super(CountingProgressBar, self).__init__(scale, buf, header)
+        self._count = 0
+        self._total = total
+
+    def tick(self):
+        self.update(self._count + 1)
+
+    def update(self, count):
+        self._count = count
+        perc = max(0, min(100, int((count / self._total) * 100)))
+        super(CountingProgressBar, self).update(perc)

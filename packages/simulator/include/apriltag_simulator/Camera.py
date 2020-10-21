@@ -3,6 +3,7 @@ from multiprocessing.pool import Pool
 
 from apriltag_simulator.constants import NUM_THREADS, INF
 from apriltag_simulator.utils import transformations
+from apriltag_simulator.constants import ROI
 
 np.set_printoptions(suppress=True)
 
@@ -83,20 +84,31 @@ class Camera(object):
     def detach_lens(self):
         self._lens = None
 
-    def render(self, scene, bgcolor=None, num_threads: int = NUM_THREADS):
+    def render(self, scene, bgcolor=None, num_threads: int = NUM_THREADS, roi: ROI = None):
         img = np.full((self._width, self._height, 3), bgcolor)
-
 
         # from apriltag_simulator.lenses import FishEyeLens
         # _k1 = -self.lens.k1
         # _k2 = 3 * self.lens.k1 ** 2 - self.lens.k2
         # ilens = FishEyeLens('ilens1', self, _k1, _k2)
 
+        # find bounding box for the scene content
+        mx, my, Mx, My = self.width, self.height, 0, 0
+        for obj in scene.objects():
+            for p in obj.shadow_polygon():
+                u, v = self._render_point3(*p)
+                if u is None or v is None:
+                    continue
+                mx = int(np.ceil(max(min(mx, u), 0)))
+                my = int(np.ceil(max(min(my, v), 0)))
+                Mx = int(np.ceil(max(max(Mx, u), self.width)))
+                My = int(np.ceil(max(max(My, v), self.height)))
+        roi = ROI(x=mx, y=my, width=Mx - mx, height=My - my)
 
         # split rendering job into num_threads workers
         args = []
         for i in range(num_threads):
-            args.append((i, num_threads, self, scene))
+            args.append((i, num_threads, self, scene, roi))
         # spin workers
         with Pool(num_threads) as pool:
             res = pool.starmap(ray_casting_through_lens_task, args)
@@ -116,14 +128,29 @@ class Camera(object):
             'height': self.height
         }
 
+    def _render_point3(self, x, y, z):
+        p2 = [x / z if z else 0, y / z if z else 0, 1]
+        u, v = np.dot(self.C, p2)[:2]
+        if self.lens:
+            # find the pixel's location on the underlying pinhole camera image
+            u, v = self.lens.rectify(u, v)
+            if u is None or v is None:
+                # we don't have a mapping between distorted pixel and underlying pinhole pixel
+                return None, None
+        return u, v
 
-def ray_casting_through_lens_task(cur, tot, camera, scene):
+
+def ray_casting_through_lens_task(cur, tot, camera, scene, roi: ROI = None):
+    if roi is None:
+        roi = ROI(x=0, y=0, width=camera.width, height=camera.height)
     split = 1 / tot
-    vs = range(int(cur * split * camera.height), int((cur + 1) * split * camera.height), 1)
+    us = range(roi.x, camera.width, 1)
+    vs = range(roi.y + int(cur * split * roi.height),
+               roi.y + int((cur + 1) * split * roi.height), 1)
     img = np.full((camera.width, camera.height, 3), INF)
     invM = transformations.inverse_matrix(camera.C)
     # shoot rays
-    for _u in range(camera.width):
+    for _u in us:
         for _v in vs:
             if camera.lens:
                 # find the pixel's location on the underlying pinhole camera image
@@ -147,7 +174,8 @@ def ray_casting_through_lens_task(cur, tot, camera, scene):
                 # the ray is a miss
                 continue
             # ---
-            img[_u, _v] = c
+            if 0 <= _u < camera.width and 0 <= _v < camera.height:
+                img[_u, _v] = c
     # ---
     return img
 
@@ -157,7 +185,6 @@ def ray_casting_through_lens_task2(cur, tot, camera, scene):
     vs = range(int(cur * split * camera.height), int((cur + 1) * split * camera.height), 1)
     img = np.full((camera.width, camera.height, 3), INF)
     invM = transformations.inverse_matrix(camera.C)
-
 
     k1 = camera.lens.k1
     k2 = camera.lens.k2

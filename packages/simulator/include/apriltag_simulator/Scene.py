@@ -7,6 +7,10 @@ class Scene:
         self._name = name
         self._objects = set()
 
+    def objects(self):
+        for obj in self._objects:
+            yield obj
+
     def add(self, obj):
         if not isinstance(obj, Object3):
             raise ValueError('Expected obj to be of type Object3, got %s instead' % str(type(obj)))

@@ -1,1 +1,1 @@
-from .ProgressBar import ProgressBar
+from .ProgressBar import ProgressBar, CountingProgressBar

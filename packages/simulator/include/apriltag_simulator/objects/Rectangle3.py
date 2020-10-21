@@ -13,9 +13,17 @@ class Rectangle3(Object3):
         self._dimensions = dimensions
         self._color = color if isinstance(color, (list, tuple)) else (
             [color, color, color] if isinstance(color, int) else [255] * 3)
-        self._plane_center = self.transform_to_world(self._get_point(0.5, 0.5, 0))
-        _plane_normal = self.transform_to_world([0, 0, -1]) - self._plane_center
-        self._plane_normal = _plane_normal / np.linalg.norm(_plane_normal)
+        self._compute_plane_center_and_normal()
+
+    def set_position(self, xyz):
+        super(Rectangle3, self).set_position(xyz)
+        # recompute plane center and normal
+        self._compute_plane_center_and_normal()
+
+    def set_orientation(self, rpy):
+        super(Rectangle3, self).set_orientation(rpy)
+        # recompute plane center and normal
+        self._compute_plane_center_and_normal()
 
     def shadow_polygon(self):
         poly = np.array([
@@ -27,24 +35,24 @@ class Rectangle3(Object3):
         # ---
         return poly
 
-    def num_points(self, steps_x=None, steps_y=None):
-        if steps_x is None:
-            steps_x = self._dimensions[0] / self._optimal_step()
-        if steps_y is None:
-            steps_y = self._dimensions[1] / self._optimal_step()
-        # ---
-        return steps_x * steps_y
-
-    def points(self, steps_x=None, steps_y=None):
-        if steps_x is None:
-            steps_x = self._dimensions[0] / self._optimal_step()
-        if steps_y is None:
-            steps_y = self._dimensions[1] / self._optimal_step()
-        # ---
-        for i in np.linspace(0, 1, int(steps_x)):
-            for j in np.linspace(0, 1, int(steps_y)):
-                point3w = self.transform_to_world(self._get_point(i, j, 0))
-                yield point3w, self._color
+    # def num_points(self, steps_x=None, steps_y=None):
+    #     if steps_x is None:
+    #         steps_x = self._dimensions[0] / self._optimal_step()
+    #     if steps_y is None:
+    #         steps_y = self._dimensions[1] / self._optimal_step()
+    #     # ---
+    #     return steps_x * steps_y
+    #
+    # def points(self, steps_x=None, steps_y=None):
+    #     if steps_x is None:
+    #         steps_x = self._dimensions[0] / self._optimal_step()
+    #     if steps_y is None:
+    #         steps_y = self._dimensions[1] / self._optimal_step()
+    #     # ---
+    #     for i in np.linspace(0, 1, int(steps_x)):
+    #         for j in np.linspace(0, 1, int(steps_y)):
+    #             point3w = self.transform_to_world(self._get_point(i, j, 0))
+    #             yield point3w, self._color
 
     def intersect(self, ray3w):
         camera_center = [0, 0, 0]
@@ -59,5 +67,10 @@ class Rectangle3(Object3):
     def _get_point(self, x, y, *_):
         return np.array([(x - 0.5) * self._dimensions[0], (y - 0.5) * self._dimensions[1], 0])
 
-    def _optimal_step(self):
-        return self.DEFAULT_STEP_M * max(1, 20 * self._xyz[2])
+    def _compute_plane_center_and_normal(self):
+        self._plane_center = self.transform_to_world(self._get_point(0.5, 0.5, 0))
+        _plane_normal = self.transform_to_world([0, 0, -1]) - self._plane_center
+        self._plane_normal = _plane_normal / np.linalg.norm(_plane_normal)
+
+    # def _optimal_step(self):
+    #     return self.DEFAULT_STEP_M * max(1, 20 * self._xyz[2])

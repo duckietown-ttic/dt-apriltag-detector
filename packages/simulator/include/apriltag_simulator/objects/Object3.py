@@ -60,13 +60,13 @@ class Object3:
             p = p + [1]
         return np.dot(self.from_world_matrix, p)[0:3]
 
-    @abstractmethod
-    def shadow_polygon(self):
-        raise NotImplementedError('The `shadow_polygon` method must be implemented by child classes')
-
-    @abstractmethod
-    def points(self, steps_x=None, steps_y=None):
-        raise NotImplementedError('The `points` method must be implemented by child classes')
+    # @abstractmethod
+    # def shadow_polygon(self):
+    #     raise NotImplementedError('The `shadow_polygon` method must be implemented by child classes')
+    #
+    # @abstractmethod
+    # def points(self, steps_x=None, steps_y=None):
+    #     raise NotImplementedError('The `points` method must be implemented by child classes')
 
     @abstractmethod
     def _get_point(self, x, y, z):
