@@ -17,10 +17,11 @@ from apriltag_simulator.objects import TexturedRectangle3
 from constants import \
     DATA_DIR, \
     grid_filepath, \
+    empty_pixel, \
     tag_size, tag_texture, \
     roll, pitch, yaw, \
     X, Y, Z, \
-    pinhole_camera_info
+    generate_camera_info
 
 logging.basicConfig()
 logger = logging.getLogger('render_undistorted_images')
@@ -30,10 +31,11 @@ logger.setLevel(logging.DEBUG)
 DEBUG = False
 PRODUCE_IMAGES = True
 APPLY_BACKGROUND = False
-formatted = lambda f: ('%.2f' % f).rstrip('0').rstrip('.')
-empty_pixel = 125
+REPLACE_IF_EXISTS = False
+formatted = lambda _f: ('%.2f' % _f).rstrip('0').rstrip('.')
 
 # create camera
+pinhole_camera_info = generate_camera_info()
 camera = Camera.from_camera_info('camera1', pinhole_camera_info)
 
 # create file mappings
@@ -72,7 +74,7 @@ def render(_x, _y, _z, _r, _p, _w):
     # compile file name
     filepath = OUT_FILEPATH(_x, _y, _z, _r, _p, _w)
     # check if the file exists
-    if os.path.isfile(filepath):
+    if (not REPLACE_IF_EXISTS) and os.path.isfile(filepath):
         logger.debug('File already exists. Skipping.')
         return
     # ---

@@ -10,3 +10,11 @@
 
 # YOUR FILES LISTED BELOW THIS LINE (IMPORTANT: PREPEND !)
 # ----------------------------------------------------------------------------
+
+packages/data
+
+!data/simulator
+#!data/lenses/829x622
+!data/lenses/4147x3110/K_-0.25__0.05__P_0__0.npy
+
+#!data/renderings/distorted/829x622/grid/K_-0.25__0.05__P_0__0

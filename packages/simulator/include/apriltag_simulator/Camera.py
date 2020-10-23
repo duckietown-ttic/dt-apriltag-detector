@@ -87,11 +87,6 @@ class Camera(object):
     def render(self, scene, bgcolor=None, num_threads: int = NUM_THREADS, roi: ROI = None):
         img = np.full((self._width, self._height, 3), bgcolor)
 
-        # from apriltag_simulator.lenses import FishEyeLens
-        # _k1 = -self.lens.k1
-        # _k2 = 3 * self.lens.k1 ** 2 - self.lens.k2
-        # ilens = FishEyeLens('ilens1', self, _k1, _k2)
-
         # find bounding box for the scene content
         mx, my, Mx, My = self.width, self.height, 0, 0
         for obj in scene.objects():
@@ -99,8 +94,8 @@ class Camera(object):
                 u, v = self._render_point3(*p)
                 if u is None or v is None:
                     continue
-                mx = int(np.ceil(max(min(mx, u), 0)))
-                my = int(np.ceil(max(min(my, v), 0)))
+                mx = int(np.floor(max(min(mx, u), 0)))
+                my = int(np.floor(max(min(my, v), 0)))
                 Mx = int(np.ceil(max(max(Mx, u), self.width)))
                 My = int(np.ceil(max(max(My, v), self.height)))
         roi = ROI(x=mx, y=my, width=Mx - mx, height=My - my)

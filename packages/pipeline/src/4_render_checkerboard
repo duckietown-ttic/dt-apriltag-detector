@@ -13,7 +13,7 @@ from apriltag_simulator.objects import TexturedPlane3
 from constants import \
     DATA_DIR, \
     grid_xyz, grid_rpw, grid_texture, \
-    pinhole_camera_info
+    generate_camera_info
 
 logging.basicConfig()
 logger = logging.getLogger('render_checkerboard')
@@ -24,6 +24,7 @@ DEBUG = False
 SIM_DATA_DIR = os.path.join(DATA_DIR, 'simulator')
 bground_out_png = os.path.join(SIM_DATA_DIR, 'background.png')
 
+pinhole_camera_info = generate_camera_info()
 camera = Camera.from_camera_info('camera1', pinhole_camera_info)
 
 grid = TexturedPlane3('grid', grid_texture, grid_xyz, grid_rpw)

@@ -1,14 +1,14 @@
 import os
 import numpy as np
 
-DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', 'data')
+DATA_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', '..', 'data')
 
-debug_factor = .2
+debug_factor = 1
 
 # wanted resolution
 Rw = 2592
 Rh = 1944
-F = Rw
+F = Rw * 0.5
 
 # NOTE: from the Apriltag paper
 # Rw = 400
@@ -16,6 +16,9 @@ F = Rw
 
 # maximum distortion (one pixel can be moved by at most 60% of Rw)
 Md = 0.6
+
+# empty pixel value
+empty_pixel = 125
 
 # compute effective resolution (including a frame to allow for distortion)
 r_w = int(Rw * (1 + Md))
@@ -95,42 +98,28 @@ def grid_texture(_x, _y):
     return [_intensity] * 3
 
 
-# define pinhole camera
-pinhole_camera_info = {
-    "image_width": r_w,
-    "image_height": r_h,
-    "camera_matrix": {
-        "data": [
-            f, 0.0, r_w / 2,
-            0.0, f, r_h / 2,
-            0.0, 0.0, 1.0
-        ]
-    }
-}
-
-
 def generate_camera_info(_scale=1.0):
     return {
         "image_width": int(r_w * _scale),
         "image_height": int(r_h * _scale),
         "camera_matrix": {
             "data": [
-                f * _scale, 0.0, r_w * 0.5 * _scale,
-                0.0, f * _scale, r_h * 0.5 * _scale,
-                0.0, 0.0, 1.0
+                f * _scale,        0.0,     r_w * 0.5 * _scale,
+                0.0,        f * _scale,     r_h * 0.5 * _scale,
+                0.0,               0.0,                    1.0
             ]
         }
     }
 
-
 # export constants
 __all__ = [
     'DATA_DIR',
-    'r_w', 'r_h',
+    'r_w', 'r_h', 'Md',
     'tag_size', 'tag_w', 'tag_h', 'tag_id', 'tag_texture',
     'grid_texture', 'grid_xyz', 'grid_rpw', 'grid_filepath',
+    'empty_pixel',
     'roll', 'pitch', 'yaw',
     'k1', 'k2', 'p1', 'p2', 'k3',
     'Z', 'X', 'Y',
-    'pinhole_camera_info', 'generate_camera_info'
+    'generate_camera_info'
 ]

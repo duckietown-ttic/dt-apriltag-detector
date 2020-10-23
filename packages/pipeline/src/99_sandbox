@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+import itertools
+import os
+import sys
+import cv2
+import time
+import logging
+import numpy as np
+import matplotlib.pyplot as plt
+from signal import signal, SIGINT
+
+from apriltag_simulator.Camera import Camera
+from apriltag_simulator.Scene import Scene
+from apriltag_simulator.lenses import FishEyeLens
+from apriltag_simulator.objects import TexturedRectangle3
+
+from dt_apriltags import Detector
+
+from constants import \
+    DATA_DIR, \
+    grid_filepath, \
+    empty_pixel, \
+    tag_size, tag_texture, \
+    X, Y, Z, \
+    generate_camera_info
+
+logging.basicConfig()
+logger = logging.getLogger('sandbox')
+logger.setLevel(logging.DEBUG)
+
+DEBUG = True
+APPLY_BACKGROUND = False
+formatted = lambda _f: ('%.2f' % _f).rstrip('0').rstrip('.')
+scale = 1
+
+# create camera
+pinhole_camera_info = generate_camera_info(scale)
+
+pinhole_camera_info2 = generate_camera_info(scale)
+pinhole_camera_info2['camera_matrix']['data'][0] *= .5
+pinhole_camera_info2['camera_matrix']['data'][4] *= .5
+
+camera = Camera.from_camera_info('camera1', pinhole_camera_info)
+camera2 = Camera.from_camera_info('camera2', pinhole_camera_info2)
+
+# create scene
+scene = Scene('scene1')
+
+# create objects
+tag = TexturedRectangle3('tag1', tag_texture, [tag_size, tag_size])
+scene.add(tag)
+
+# load background
+bground = cv2.imread(grid_filepath)
+bground = cv2.resize(bground, dsize=(camera.width, camera.height), interpolation=cv2.INTER_CUBIC)
+bground = bground.transpose((1, 0, 2))
+
+# provide a clean way of stopping
+_sigint_handler = lambda *_: sys.exit(0)
+signal(SIGINT, _sigint_handler)
+
+
+# define rendering function
+def render(_x, _y, _z, _r, _p, _w, _c=None):
+    # if _c is None:
+    #     _c = camera
+    logger.debug('Rendering:'
+                 '\n\t- resolution  [%d, %d]' % (_c.width, _c.height) +
+                 '\n\t- focal len   [%.1f, %.1f]' % (_c.fx, _c.fy) +
+                 '\n\t- position    [%.2f, %.2f, %.2f]' % (_x, _y, _z) +
+                 '\n\t- orientation [%.2f, %.2f, %.2f]' % (_r, _p, _w))
+    tag_xyz = [_x, _y, _z]
+    tag_rpw = [np.deg2rad(_r), np.deg2rad(_p), np.deg2rad(_w)]
+    # move the tag to the current position
+    tag.set_position(tag_xyz)
+    tag.set_orientation(tag_rpw)
+    # render
+    stime = time.time()
+    img = _c.render(scene, bgcolor=empty_pixel)
+    if APPLY_BACKGROUND:
+        img = np.ma.where(img == empty_pixel, bground, img)
+    logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
+    # ---
+    return img
+
+
+
+
+
+
+
+img1 = render(0, 0, 2, 0, 0, 0, camera)
+img2 = render(0, 0, 1, 0, 0, 0, camera2)
+
+
+LENS_DATA_DIR = os.path.join(
+    DATA_DIR, 'lenses', f'{camera.width}x{camera.height}')
+LENS_FILEPATH = lambda _k1, _k2, _p1, _p2, *_: \
+    os.path.join(
+        LENS_DATA_DIR,
+        f'K_{formatted(_k1)}__{formatted(_k2)}__P_{formatted(_p1)}__{formatted(_p2)}.npy'
+    )
+
+
+# unpack lens params
+_k1, _k2, _k3, _p1, _p2 = [-0.25, 0.05, 0, 0, 0]
+# some info
+logger.debug(f'Using lens:'
+             '\n\t- radial (K)      [%.2f, %.2f, %.2f]' % (_k1, _k2, _k3) +
+             '\n\t- tangential (P)  [%.2f, %.2f]' % (_p1, _p2))
+# load lens map
+lens_filepath = LENS_FILEPATH(_k1, _k2, _p1, _p2)
+lens_map = np.load(lens_filepath).transpose((1, 0, 2))
+
+
+lens1 = FishEyeLens('lens1', camera, _k1, _k2, _k3, _p1, _p2, generate_inverse_map=False)
+lens2 = FishEyeLens('lens2', camera2, _k1, _k2, _k3, _p1, _p2, generate_inverse_map=False)
+map1 = np.zeros((camera.height, camera.width, 2), dtype=np.float32)
+map2 = np.zeros((camera2.height, camera2.width, 2), dtype=np.float32)
+
+for u, v in itertools.product(range(camera.width), range(camera.height)):
+    du1, dv1 = lens1.distort(u, v)
+    du2, dv2 = lens2.distort(u, v)
+    if du1 is not None and dv1 is not None:
+        map1[dv1, du1] = [v, u]
+    if du2 is not None and dv2 is not None:
+        map2[dv2, du2] = [v, u]
+
+
+# create a progress bar
+logger.info('Processing images:')
+# apply lens
+dimg1 = cv2.remap(img1, map1, None, cv2.INTER_LINEAR)
+dimg2 = cv2.remap(img2, map2, None, cv2.INTER_LINEAR)
+
+
+f, axarr = plt.subplots(2)
+axarr[0].imshow(dimg1)
+axarr[0].set_title('Big Focal Length')
+
+axarr[1].imshow(dimg2)
+axarr[1].set_title('Small Focal Length')
+
+plt.show()
+
+exit(0)
+
+
+if DEBUG:
+    # show image
+
+
+
+    plt.imshow(img1.transpose((1, 0, 2)))
+    plt.show()
+
+exit(0)
+
+
+# create apriltag detector
+detector = Detector()
+
+# turn img into grayscale
+img = img[:, :, 0].T
+
+stime = time.time()
+detection = detector.detect(img)
+ftime = time.time() - stime
+print('Processed in %.5f secs' % ftime)
+
+print(detection)
+

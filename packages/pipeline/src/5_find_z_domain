@@ -16,17 +16,18 @@ from dt_apriltags import Detector
 
 from constants import \
     grid_filepath, \
+    empty_pixel, \
     tag_size, tag_texture, \
-    pinhole_camera_info
+    generate_camera_info
 
 logging.basicConfig()
 logger = logging.getLogger('find_z_domain')
 logger.setLevel(logging.DEBUG)
 
 DEBUG = False
-empty_pixel = 125
 
 # create camera
+pinhole_camera_info = generate_camera_info()
 camera = Camera.from_camera_info('camera1', pinhole_camera_info)
 
 # create scene

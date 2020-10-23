@@ -1,45 +1,67 @@
 #!/usr/bin/env python3
-import glob
+
 import os
+import glob
 import sys
+from collections import namedtuple
 
 import cv2
 import logging
+
+import imageio
+import matplotlib.patches
+import numpy as np
 from signal import signal, SIGINT
+import matplotlib.pyplot as plt
 
 from apriltag_simulator.Camera import Camera
+from apriltag_simulator.utils import CountingProgressBar
 
 from constants import \
     DATA_DIR, \
+    Md, \
     grid_filepath, \
+    empty_pixel, \
     k1, k2, p1, p2, k3, \
-    pinhole_camera_info
+    generate_camera_info
+
+Rectangle = namedtuple('Rectangle', 'x y w h')
+Pose = namedtuple('Pose', 'x y z r p w')
+
+# TODO: it looks like using the full Md removed too many pixels from the image
+_Md = Md * 0.5
 
 logging.basicConfig()
 logger = logging.getLogger('render_distorted_images')
 logger.setLevel(logging.DEBUG)
 
-
 DEBUG = False
 PRODUCE_IMAGES = True
 APPLY_BACKGROUND = False
-formatted = lambda f: ('%.2f' % f).rstrip('0').rstrip('.')
-empty_pixel = 125
+formatted = lambda _f: ('%.2f' % _f).rstrip('0').rstrip('.')
 
 # create camera
+pinhole_camera_info = generate_camera_info()
 camera = Camera.from_camera_info('camera1', pinhole_camera_info)
 
 # create file mappings
-IN_RENDERING_DATA_DIR = os.path.join(
-    DATA_DIR, 'renderings', 'undistorted', f'{camera.width}x{camera.height}')
+IN_RENDERING_DATA_DIR = os.path.abspath(os.path.join(
+    DATA_DIR, 'renderings', 'undistorted', f'{camera.width}x{camera.height}'))
+LENS_DATA_DIR = os.path.join(
+    DATA_DIR, 'lenses', f'{camera.width}x{camera.height}')
+LENS_FILEPATH = lambda _k1, _k2, _p1, _p2, *_: \
+    os.path.join(
+        LENS_DATA_DIR,
+        f'K_{formatted(_k1)}__{formatted(_k2)}__P_{formatted(_p1)}__{formatted(_p2)}.npy'
+    )
 OUT_RENDERING_DATA_DIR = os.path.join(
     DATA_DIR, 'renderings', 'distorted', f'{camera.width}x{camera.height}',
     'plain' if not APPLY_BACKGROUND else 'grid')
-OUT_FILEPATH = lambda _k1, _k2, _p1, _p2, _, _in_filepath: \
+OUT_FILEPATH = lambda _k1, _k2, _, _p1, _p2, _in_filepath: \
     os.path.join(
         OUT_RENDERING_DATA_DIR,
         f'K_{formatted(_k1)}__{formatted(_k2)}__P_{formatted(_p1)}__{formatted(_p2)}',
-        f'{os.path.relpath(_in_filepath, IN_RENDERING_DATA_DIR)}'
+        f'{os.path.abspath(_in_filepath)[len(IN_RENDERING_DATA_DIR)+1:]}'
     )
 
 # load background
@@ -53,6 +75,7 @@ signal(SIGINT, _sigint_handler)
 
 # load all images
 images = glob.glob(f'{IN_RENDERING_DATA_DIR}/**/*.png', recursive=True)
+images = sorted(images)
 logger.info('Found %d images' % len(images))
 
 # produce lenses
@@ -62,7 +85,97 @@ for _k1 in k1:
         for _k3 in k3:
             for _p1 in p1:
                 for _p2 in p2:
-                    lenses.append((_k1, _k2, _p1, _p2, _k3))
-logger.info('Generated %d lenses' % len(lenses))
+                    lenses.append((_k1, _k2, _k3, _p1, _p2))
+logger.info('Found %d lenses' % len(lenses))
 
+# print out some stats about the work to do
 logger.info('Expected %d new images to be produced' % (len(lenses) * len(images)))
+
+
+# define cropping function
+def crop(_img):
+    _w, _h, _ = _img.shape
+    _w1, _h1 = int(np.round(_w / (1 + _Md))), int(np.round(_h / (1 + _Md)))
+    _w_off, _h_off = int(np.round((_w - _w1) * 0.5)), int(np.round((_h - _h1) * 0.5))
+    return Rectangle(_w_off, _h_off, _w1, _h1), _img[_w_off:-_w_off, _h_off:-_h_off, :]
+
+
+# define image name parsing function
+def parse_name(_filepath):
+    _filepath = os.path.abspath(_filepath)[:-4]
+    _filepath = _filepath[len(IN_RENDERING_DATA_DIR) + 1:]
+    _pose = {}
+    for _comp in _filepath.split('/'):
+        _k, _v = _comp.split('_')
+        _pose[_k] = float(_v)
+    return Pose(**_pose)
+
+
+# distort images
+lens_no = 0
+for lens_params in lenses:
+    lens_no += 1
+    # unpack lens params
+    _k1, _k2, _k3, _p1, _p2 = lens_params
+    # some info
+    logger.debug(f'Using lens {lens_no}/{len(lenses)}:'
+                 '\n\t- resolution      [%d, %d]' % (camera.width, camera.height) +
+                 '\n\t- radial (K)      [%.2f, %.2f, %.2f]' % (_k1, _k2, _k3) +
+                 '\n\t- tangential (P)  [%.2f, %.2f]' % (_p1, _p2))
+    # load lens map
+    lens_filepath = LENS_FILEPATH(_k1, _k2, _p1, _p2)
+    lens_map = np.load(lens_filepath).transpose((1, 0, 2))
+    assert (lens_map.shape == (camera.width, camera.height, 2))
+    # create a progress bar
+    pbar = CountingProgressBar(len(images))
+    logger.info('Processing images:')
+    # apply lens to all the undistorted images
+    for image_filepath in images:
+        # compile output
+        out_filepath = OUT_FILEPATH(*lens_params, image_filepath)
+        # make sure the image does not exist
+        if PRODUCE_IMAGES and os.path.isfile(out_filepath):
+            pbar.tick()
+            continue
+        # load image
+        img = cv2.imread(image_filepath).transpose((1, 0, 2))
+        assert (lens_map.shape == (img.shape[0], img.shape[1], 2))
+        # apply background
+        if APPLY_BACKGROUND:
+            img = np.ma.where(img == empty_pixel, bground, img)
+        # apply lens
+        dimg = cv2.remap(img, lens_map, None, cv2.INTER_LINEAR)
+        rect, dimg_crop = crop(dimg)
+        # debug
+        if DEBUG:
+            pose = parse_name(image_filepath)
+            # show images
+            f, axarr = plt.subplots(2, 2)
+            axarr[0, 0].imshow(img.transpose((1, 0, 2)))
+            axarr[0, 0].set_title('Pinhole image'
+                                  '(x=%.2f, y=%.2f, z=%.2f, roll=%.2f, pitch=%.2f, yaw=%.2f)' %
+                                  (pose.x, pose.y, pose.z, pose.r, pose.p, pose.w))
+
+            axarr[0, 1].imshow(dimg.transpose((1, 0, 2)))
+            axarr[0, 1].set_title('Distorted image '
+                                  '(k1=%.2f, k2=%.2f, p1=%.2f, p2=%.2f)' % (_k1, _k2, _p1, _p2))
+
+            # draw rectangle
+            rect = matplotlib.patches.Rectangle(
+                (rect.x, rect.y), rect.w, rect.h, linewidth=2, edgecolor='r', facecolor='none')
+            axarr[1, 0].imshow(img.transpose((1, 0, 2)))
+            axarr[1, 0].add_patch(rect)
+            axarr[1, 0].set_title('Pinhole image (with crop contour)')
+            # show cropped distorted image
+            axarr[1, 1].imshow(dimg_crop.transpose((1, 0, 2)))
+            axarr[1, 1].set_title('Cropped distorted image (final)')
+            plt.show()
+        # save image to disk
+        if PRODUCE_IMAGES:
+            # compile file name
+            filedir = os.path.dirname(out_filepath)
+            os.makedirs(filedir, exist_ok=True)
+            # save rendering to disk
+            imageio.imsave(out_filepath, dimg_crop.transpose((1, 0, 2)))
+        # update progress bar
+        pbar.tick()

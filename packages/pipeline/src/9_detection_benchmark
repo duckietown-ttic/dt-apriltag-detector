@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+
+import os
+import glob
+import sys
+import time
+from collections import namedtuple
+
+import cv2
+import logging
+
+import numpy as np
+from signal import signal, SIGINT
+import matplotlib.pyplot as plt
+
+from apriltag_simulator.Camera import Camera
+from apriltag_simulator.utils import CountingProgressBar
+
+from dt_apriltags import Detector
+
+from constants import \
+    DATA_DIR, \
+    Md, \
+    grid_filepath, \
+    tag_id, \
+    k1, k2, p1, p2, k3, \
+    generate_camera_info
+
+Lens = namedtuple('Lens', 'k1 k2 p1 p2 k3')
+Pose = namedtuple('Pose', 'x y z r p w')
+
+logging.basicConfig()
+logger = logging.getLogger('detection_benchmark')
+logger.setLevel(logging.DEBUG)
+
+DEBUG = True
+WITH_BACKGROUND = True
+formatted = lambda _f: ('%.2f' % _f).rstrip('0').rstrip('.')
+
+# create camera
+pinhole_camera_info = generate_camera_info()
+camera = Camera.from_camera_info('camera1', pinhole_camera_info)
+
+# define lens to use
+lens = Lens(k1=-0.25, k2=next(iter(k2(-0.25))), p1=0, p2=0, k3=0)
+
+# create file mappings
+LENS_NAME = lambda _k1, _k2, _p1, _p2, *_: \
+    f'K_{formatted(_k1)}__{formatted(_k2)}__P_{formatted(_p1)}__{formatted(_p2)}'
+IN_RENDERING_DATA_DIR = os.path.abspath(os.path.join(
+    DATA_DIR, 'renderings', 'distorted', f'{camera.width}x{camera.height}',
+    'plain' if not WITH_BACKGROUND else 'grid',
+    LENS_NAME(lens.k1, lens.k2, lens.p1, lens.p2, lens.k3)))
+
+# provide a clean way of stopping
+_sigint_handler = lambda *_: sys.exit(0)
+signal(SIGINT, _sigint_handler)
+
+# some info
+logger.debug(f'Detecting tags:'
+             '\n\t- resolution      [%d, %d]' % (camera.width, camera.height) +
+             '\n\t- radial (K)      [%.2f, %.2f, %.2f]' % (lens.k1, lens.k2, lens.k3) +
+             '\n\t- tangential (P)  [%.2f, %.2f]' % (lens.p1, lens.p2))
+
+# load all images
+images = glob.glob(f'{IN_RENDERING_DATA_DIR}/**/*.png', recursive=True)
+images = sorted(images)
+logger.info('Found %d images' % len(images))
+
+
+# define image name parsing function
+def parse_name(_filepath):
+    _filepath = os.path.abspath(_filepath)[:-4]
+    _filepath = _filepath[len(IN_RENDERING_DATA_DIR) + 1:]
+    # _lens_str, _filepath = _filepath.split('/', maxsplit=1)
+    _pose = {}
+    for _comp in _filepath.split('/'):
+        _k, _v = _comp.split('_')
+        _pose[_k] = float(_v)
+    return Pose(**_pose)
+
+
+# create apriltag detector
+detector = Detector(nthreads=1, quad_decimate=1.0)
+
+# stats
+hits = 0
+times = []
+
+# create a progress bar
+pbar = CountingProgressBar(len(images))
+logger.info('Processing images:')
+for i, image_filepath in enumerate(images):
+    # read tag pose
+    pose = parse_name(image_filepath)
+    # load image
+    img = cv2.imread(image_filepath).transpose((1, 0, 2))
+    # turn img into grayscale
+    img = img[:, :, 0].T
+    # detect tag
+    stime = time.time()
+    detections = detector.detect(img)
+    dtime = time.time() - stime
+    # check if detection happened
+    if len(detections):
+        times.append(dtime)
+        if detections[0].tag_id == tag_id:
+            hits += 1
+    pbar.tick()
+
+    # if i == 10:
+    #     break
+
+print(f'Detected {hits} tags out of {len(images)} ({int(100 * (hits / len(images)))}%)')
+print(f'Detection time is %.4f secs (std. %.4f secs)' % (np.mean(times), np.std(times)))

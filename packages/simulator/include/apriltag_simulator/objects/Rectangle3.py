@@ -30,8 +30,6 @@ class Rectangle3(Object3):
             self.transform_to_world(self._get_point(*c))
             for c in [(0, 0), (0.5, 0), (1, 0), (1, 0.5), (1, 1), (0.5, 1), (0, 1), (0, 0.5)]
         ])
-        # project polygon on the plane: z = min p.z   for every p in polygon
-        poly[:, 2] = np.min(poly[:, 2])
         # ---
         return poly
 

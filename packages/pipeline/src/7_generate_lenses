@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+
+import itertools
+import os
+import sys
+import cv2
+import time
+import logging
+import numpy as np
+import matplotlib.pyplot as plt
+from signal import signal, SIGINT
+
+from apriltag_simulator.Camera import Camera
+from apriltag_simulator.Scene import Scene
+from apriltag_simulator.lenses import FishEyeLens
+from apriltag_simulator.objects import TexturedRectangle3
+from apriltag_simulator.utils import CountingProgressBar
+
+
+from dt_apriltags import Detector
+
+
+from constants import \
+    DATA_DIR, \
+    grid_filepath, \
+    empty_pixel, \
+    k1, k2, p1, p2, k3, \
+    tag_size, tag_texture, \
+    generate_camera_info
+
+logging.basicConfig()
+logger = logging.getLogger('generate_lenses')
+logger.setLevel(logging.DEBUG)
+
+
+DEBUG = True
+PRODUCE_LENSES = False
+formatted = lambda _f: ('%.2f' % _f).rstrip('0').rstrip('.')
+
+# create camera
+debug_scale = 1
+pinhole_camera_info = generate_camera_info()
+camera = Camera.from_camera_info('camera1', pinhole_camera_info)
+
+resolution = f'{camera.width}x{camera.height}'
+# resolution = '4147x3110'
+
+# create file mappings
+LENS_DATA_DIR = os.path.join(DATA_DIR, 'lenses', f'{camera.width}x{camera.height}')
+OUT_FILEPATH = lambda _k1, _k2, _p1, _p2, *_: \
+    os.path.join(
+        LENS_DATA_DIR,
+        f'K_{formatted(_k1)}__{formatted(_k2)}__P_{formatted(_p1)}__{formatted(_p2)}'
+    )
+
+# DEBUG only
+if DEBUG:
+    logger.debug('Rendering sample scene...')
+    # create scene
+    scene = Scene('scene1')
+    # create objects
+    tag = TexturedRectangle3('tag1', tag_texture, [tag_size, tag_size], [0, 0, 200])
+    scene.add(tag)
+    # define size of debug image
+    debug_w = int(np.ceil(camera.width * debug_scale))
+    debug_h = int(np.ceil(camera.height * debug_scale))
+    # load background
+    bground = cv2.imread(grid_filepath)
+    bground = cv2.resize(bground, dsize=(debug_w, debug_h), interpolation=cv2.INTER_CUBIC)
+    bground = bground.transpose((1, 0, 2))
+    # render
+    stime = time.time()
+    # img = camera.render(scene, bgcolor=empty_pixel)
+    # img = cv2.resize(img, dsize=(debug_h, debug_w), interpolation=cv2.INTER_CUBIC)
+
+    img = cv2.imread(os.path.join(DATA_DIR, 'renderings', f'undistorted/{resolution}/z_1.5/x_0/y_-0/r_0/p_0/w_0.png'))
+    img = cv2.resize(img, dsize=(debug_h, debug_w), interpolation=cv2.INTER_CUBIC)
+
+    # img = np.ma.where(img == empty_pixel, bground, img)
+    logger.debug('Rendered in {} secs'.format(int(time.time() - stime)))
+
+# provide a clean way of stopping
+_sigint_handler = lambda *_: sys.exit(0)
+signal(SIGINT, _sigint_handler)
+
+
+# define utility scaling function
+def scale(u, v, s):
+    return int(np.floor(u * s)), int(np.floor(v * s))
+
+
+# define rendering function
+def generate_lens(_k1, _k2, _p1, _p2, _k3):
+    logger.debug('Generating Lens:'
+                 '\n\t- resolution      [%d, %d]' % (camera.width, camera.height) +
+                 '\n\t- radial (K)      [%.2f, %.2f, %.2f]' % (_k1, _k2, _k3) +
+                 '\n\t- tangential (P)  [%.2f, %.2f]' % (_p1, _p2))
+    # compile file name
+    filepath = OUT_FILEPATH(_k1, _k2, _p1, _p2, _k3)
+    # check if the file exists
+    if os.path.isfile(filepath):
+        logger.debug('Lens already exists. Skipping.')
+        return
+    # ---
+    # create lens
+    lens = FishEyeLens('lens1', camera, _k1, _k2, _k3, _p1, _p2, generate_inverse_map=False)
+    # create maps
+    logger.info('Generating lens maps...')
+    stime = time.time()
+
+
+    # map = np.zeros((camera.height, camera.width, 2), dtype=np.float32)
+    # pbar = CountingProgressBar(camera.width * camera.height)
+    # for u, v in itertools.product(range(camera.width), range(camera.height)):
+    #     du, dv = lens.distort(u, v)
+    #     if du is not None and dv is not None:
+    #         map[dv, du] = [v, u]
+    #     pbar.tick()
+
+    map = np.load(os.path.join(DATA_DIR, 'lenses', f'{resolution}/K_-0.25__0.05__P_0__0.npy'))
+
+
+
+    logger.info(f'Generated in {int(time.time() - stime)} secs.')
+    # ---
+    if DEBUG:
+        logger.info('Distorting sample image...')
+        # distort image
+
+        stime = time.time()
+        dimg1 = np.zeros((debug_w, debug_h, 3), dtype=np.uint8)
+        # pbar = CountingProgressBar(debug_w * debug_h)
+        # for u, v in itertools.product(range(debug_w), range(debug_h)):
+        #     try:
+        #         _u, _v = scale(u, v, 1.0 / debug_scale)
+        #         _du, _dv = lens.distort(u, v)
+        #         du, dv = scale(_du, _dv, debug_scale)
+        #         dimg1[du, dv] = img[u, v]
+        #     except:
+        #         pass
+        #     pbar.tick()
+        # logger.debug(f'Remapping w/ Python.for-loop completed in {round(time.time() - stime, 4)} seconds')
+
+        stime = time.time()
+
+        # create apriltag detector
+        detector = Detector(quad_decimate=1.0, nthreads=4)
+        # turn img into grayscale
+        gsimg = img[:, :, 0].T
+        gsimg = cv2.resize(gsimg, dsize=(1296, 972), interpolation=cv2.INTER_CUBIC)
+
+
+        map = cv2.resize(map, dsize=(1296, 972), interpolation=cv2.INTER_CUBIC).astype(np.float32)
+
+        _ntests = 50
+        _timeit = []
+        for _ in range(_ntests):
+            _stime = time.time()
+            dimg2 = cv2.remap(img, map, None, cv2.INTER_LINEAR)
+
+            _timeit.append(time.time() - _stime)
+        print('Remapping in: %.4f secs (std. %.4f secs), %.2f Hz' % (np.mean(_timeit), np.std(_timeit), (1.0 / np.mean(_timeit))))
+
+
+        _timeit = []
+        for _ in range(_ntests):
+            _stime = time.time()
+
+            detector.detect(gsimg)
+            _timeit.append(time.time() - _stime)
+
+        print('Detection in: %.4f secs (std. %.4f secs), %.2f Hz' % (
+        np.mean(_timeit), np.std(_timeit), (1.0 / np.mean(_timeit))))
+
+
+        # logger.debug(f'Remapping w/ cv2.remap completed in {round(time.time() - stime, 4)} seconds')
+
+        # show images
+        f, axarr = plt.subplots(1, 2)
+        axarr[0].imshow(dimg1.transpose((1, 0, 2)))
+        axarr[1].imshow(dimg2)
+        plt.show()
+    # serialize the lens object
+    if PRODUCE_LENSES:
+        logger.info('Serializing lens to file... ')
+        # create directory
+        filedir = os.path.dirname(filepath)
+        os.makedirs(filedir, exist_ok=True)
+        # save to file
+        stime = time.time()
+        np.save(filepath, map)
+        logger.info(f'Serialized in {int(time.time() - stime)} secs.')
+    # ---
+    print()
+
+
+# render all images
+i = 1
+no_lenses = len(k1) * len(k3) * len(p1) * len(p2)
+for _k1 in k1:
+    for _k2 in k2(_k1):
+        for _k3 in k3:
+            for _p1 in p1:
+                for _p2 in p2:
+                    logger.info(f'Generating lens {i}/{no_lenses}...')
+                    generate_lens(_k1, _k2, _p1, _p2, _k3)
+                    i += 1
+
+
+
+
+

@@ -3,4 +3,4 @@ scikit-image
 matplotlib
 requests
 
-dt-apriltags
+#dt-apriltags
